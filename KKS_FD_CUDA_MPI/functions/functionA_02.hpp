@@ -1,11 +1,10 @@
-#ifndef FUNCTIONA_02_CUH_
-#define FUNCTIONA_02_CUH_
+#ifndef FUNCTIONA_02_HPP_
+#define FUNCTIONA_02_HPP_
 
 #include <stdio.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include "structures.h"
-#include "anisotropy_01.cuh"
+#include <cmath>
+#include "structures.hpp"
+#include "anisotropy_01.hpp"
 
 #define ix 0
 #define iy 1
@@ -20,7 +19,7 @@
 #define back   6
 
 /*
- * __device__ double calcAnisotropy_02
+ * double calcAnisotropy_02
  *
  * Calculate anisotropy
  *
@@ -38,11 +37,11 @@
  *              10. double DELTA_Z
  *
  */
-extern __device__
+
 double calcAnisotropy_02(double phi[MAX_NUM_PHASES][3][3][3],
                          double *dab, double *eps_ab,
                          double *Rotation_matrix, double *Inv_rotation_matrix,
                          long phase, long NUMPHASES, long DIMENSION,
                          double DELTA_X, double DELTA_Y, double DELTA_Z);
 
-#endif
+#endif // FUNCTIONA_02_HPP_
