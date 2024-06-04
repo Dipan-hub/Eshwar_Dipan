@@ -1,6 +1,6 @@
-#include "functionA_02.cuh"
+#include "functionA_02.hpp"
 
-extern __device__
+extern 
 double calcAnisotropy_02(double phi[MAX_NUM_PHASES][3][3][3],
                          double *dab, double *eps_ab,
                          double *Rotation_matrix, double *Inv_rotation_matrix,
@@ -220,72 +220,178 @@ double calcAnisotropy_02(double phi[MAX_NUM_PHASES][3][3][3],
         gradPhiMid[1][front][iz]  = 0.0;
         gradPhiMid[1][back][iz]   = 0.0;
     }
-
-    for (ip1 = 0; ip1 < NUMPHASES; ip1++)
+    if(DIMENSION == 1)
     {
-        if (ip1 == phase)
-            continue;
-
-        /*
-         *  Find phiMid and gradPhiMid for phase beta
-         */
-
-        phiMid[1][centre] = phi[ip1][1][1][1];
-
-        phiMid[1][left]   = (phi[ip1][0][1][1] + phi[ip1][1][1][1])/2.0;
-        phiMid[1][right]  = (phi[ip1][2][1][1] + phi[ip1][1][1][1])/2.0;
-
-        if (DIMENSION >= 2)
+         for (ip1 = 0; ip1 < NUMPHASES; ip1++)
         {
+            if (ip1 == phase)
+                continue;
+            phiMid[1][centre] = phi[ip1][1][1][1];
+
+            phiMid[1][left]   = (phi[ip1][0][1][1] + phi[ip1][1][1][1])/2.0;
+            phiMid[1][right]  = (phi[ip1][2][1][1] + phi[ip1][1][1][1])/2.0;
+
+            gradPhiMid[1][centre][ix] = (phi[ip1][2][1][1] - phi[ip1][0][1][1])/(2.0*DELTA_X);
+            gradPhiMid[1][left][ix]   = (phi[ip1][1][1][1] - phi[ip1][0][1][1])/(DELTA_X);
+            gradPhiMid[1][right][ix]  = (phi[ip1][2][1][1] - phi[ip1][1][1][1])/(DELTA_X);
+
+            for (i = 0; i < 7; i++)
+            {
+                qMid[i][ix] = phiMid[0][i]*gradPhiMid[1][i][ix] - phiMid[1][i]*gradPhiMid[0][i][ix];
+                qMid[i][iy] = 0.0;
+                qMid[i][iz] = 0.0;
+            }
+
+             for (i = 0; i < 7; i++)
+            {
+                ac[i] = anisotropy_01_function_ac(qMid[i], phase, ip1, dab, NUMPHASES);
+                anisotropy_01_dAdq(qMid[i], dadq[i], phase, ip1, dab, NUMPHASES);
+            }
+
+            dqdphi[ix] = gradPhiMid[1][centre][ix];
+            sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[right]*dadq[right][ix]*-phiMid[1][right]
+            *(qMid[right][ix]*qMid[right][ix] + qMid[right][iy]*qMid[right][iy] + qMid[right][iz]*qMid[right][iz])
+            )/DELTA_X;
+            sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[left]*dadq[left][ix]*-phiMid[1][left]
+            *(qMid[left][ix]*qMid[left][ix] + qMid[left][iy]*qMid[left][iy] + qMid[left][iz]*qMid[left][iz])
+            )/DELTA_X;
+
+            sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[right]*ac[right]*2.0*qMid[right][ix]*-phiMid[1][right]/DELTA_X;
+            sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[left]*ac[left]*2.0*qMid[left][ix]*-phiMid[1][left]/DELTA_X;
+
+            sum3 += -2.0*eps_ab[phase*NUMPHASES + ip1]*ac[centre]
+            *(dadq[centre][ix]*dqdphi[ix])
+            *(qMid[centre][ix]*qMid[centre][ix]);
+
+            sum4 += -eps_ab[phase*NUMPHASES + ip1]*ac[centre]*ac[centre]*2.0*(qMid[centre][ix]*dqdphi[ix]);
+        }
+        
+    }
+
+    else if(DIMENSION == 2)
+    {
+        for (ip1 = 0; ip1 < NUMPHASES; ip1++)
+        {
+            if (ip1 == phase)
+                continue;
+
+            phiMid[1][centre] = phi[ip1][1][1][1];
+
+            phiMid[1][left]   = (phi[ip1][0][1][1] + phi[ip1][1][1][1])/2.0;
+            phiMid[1][right]  = (phi[ip1][2][1][1] + phi[ip1][1][1][1])/2.0;
             phiMid[1][top]    = (phi[ip1][1][0][1] + phi[ip1][1][1][1])/2.0;
             phiMid[1][bottom] = (phi[ip1][1][2][1] + phi[ip1][1][1][1])/2.0;
-        }
 
-        if (DIMENSION == 3)
-        {
-            phiMid[1][front]  = (phi[ip1][1][1][0] + phi[ip1][1][1][1])/2.0;
-            phiMid[1][back]   = (phi[ip1][1][1][2] + phi[ip1][1][1][1])/2.0;
-        }
+            gradPhiMid[1][centre][ix] = (phi[ip1][2][1][1] - phi[ip1][0][1][1])/(2.0*DELTA_X);
+            gradPhiMid[1][left][ix]   = (phi[ip1][1][1][1] - phi[ip1][0][1][1])/(DELTA_X);
+            gradPhiMid[1][right][ix]  = (phi[ip1][2][1][1] - phi[ip1][1][1][1])/(DELTA_X);
 
-        /*
-         * First index: 1, denoting phase beta
-         * Second index: Location in stencil
-         * Third index: Direction
-         */
-
-        gradPhiMid[1][centre][ix] = (phi[ip1][2][1][1] - phi[ip1][0][1][1])/(2.0*DELTA_X);
-        gradPhiMid[1][left][ix]   = (phi[ip1][1][1][1] - phi[ip1][0][1][1])/(DELTA_X);
-        gradPhiMid[1][right][ix]  = (phi[ip1][2][1][1] - phi[ip1][1][1][1])/(DELTA_X);
-
-        if (DIMENSION >= 2)
-        {
             gradPhiMid[1][top][ix]    = ((phi[ip1][2][0][1] - phi[ip1][0][0][1])/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
             gradPhiMid[1][bottom][ix] = ((phi[ip1][2][2][1] - phi[ip1][0][2][1])/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
 
-            if (DIMENSION == 3)
-            {
-                gradPhiMid[1][front][ix]  = ((phi[ip1][2][1][0] - phi[ip1][0][1][0])/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
-                gradPhiMid[1][back][ix]   = ((phi[ip1][2][1][2] - phi[ip1][0][1][2])/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
-            }
-        }
-
-        if (DIMENSION >= 2)
-        {
             gradPhiMid[1][centre][iy] = (phi[ip1][1][2][1] - phi[ip1][1][0][1])/(2.0*DELTA_Y);
             gradPhiMid[1][left][iy]   = ((phi[ip1][0][2][1] - phi[ip1][0][0][1])/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
             gradPhiMid[1][right][iy]  = ((phi[ip1][2][2][1] - phi[ip1][2][0][1])/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
             gradPhiMid[1][top][iy]    = (phi[ip1][1][1][1] - phi[ip1][1][0][1])/(DELTA_Y);
             gradPhiMid[1][bottom][iy] = (phi[ip1][1][2][1] - phi[ip1][1][1][1])/(DELTA_Y);
 
-            if (DIMENSION == 3)
+            for (i = 0; i < 7; i++)
             {
-                gradPhiMid[1][front][iy]  = ((phi[ip1][1][2][0] - phi[ip1][1][0][0])/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
-                gradPhiMid[1][back][iy]   = ((phi[ip1][1][2][2] - phi[ip1][1][0][2])/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
+                qMid[i][ix] = phiMid[0][i] * gradPhiMid[1][i][ix] - phiMid[1][i] * gradPhiMid[0][i][ix];
+                qMid[i][iy] = phiMid[0][i] * gradPhiMid[1][i][iy] - phiMid[1][i] * gradPhiMid[0][i][iy];
+                qMid[i][iz] = 0.0;
             }
-        }
 
-        if (DIMENSION == 3)
+            for (i = 0; i < 7; i++)
+            {
+                ac[i] = anisotropy_01_function_ac(qMid[i], phase, ip1, dab, NUMPHASES);
+                anisotropy_01_dAdq(qMid[i], dadq[i], phase, ip1, dab, NUMPHASES);
+            }
+
+            dqdphi[ix] = gradPhiMid[1][centre][ix];
+            dqdphi[iy] = gradPhiMid[1][centre][iy];
+            
+            sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[right]*dadq[right][ix]*-phiMid[1][right]
+            *(qMid[right][ix]*qMid[right][ix] + qMid[right][iy]*qMid[right][iy] + qMid[right][iz]*qMid[right][iz])
+            )/DELTA_X;
+            sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[left]*dadq[left][ix]*-phiMid[1][left]
+            *(qMid[left][ix]*qMid[left][ix] + qMid[left][iy]*qMid[left][iy] + qMid[left][iz]*qMid[left][iz])
+            )/DELTA_X;
+
+            sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*dadq[bottom][iy]*-phiMid[1][bottom]
+            *(qMid[bottom][ix]*qMid[bottom][ix] + qMid[bottom][iy]*qMid[bottom][iy] + qMid[bottom][iz]*qMid[bottom][iz])
+            )/DELTA_Y;
+            sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[top]*dadq[top][iy]*-phiMid[1][top]
+            *(qMid[top][ix]*qMid[top][ix] + qMid[top][iy]*qMid[top][iy] + qMid[top][iz]*qMid[top][iz])
+            )/DELTA_Y;
+
+            sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[right]*ac[right]*2.0*qMid[right][ix]*-phiMid[1][right]/DELTA_X;
+            sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[left]*ac[left]*2.0*qMid[left][ix]*-phiMid[1][left]/DELTA_X;
+
+            sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*ac[bottom]*2.0*qMid[bottom][iy]*-phiMid[1][bottom]/DELTA_Y;
+            sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[top]*ac[top]*2.0*qMid[top][iy]*-phiMid[1][top]/DELTA_Y;
+
+            sum3 += -2.0*eps_ab[phase*NUMPHASES + ip1]*ac[centre]
+            *(dadq[centre][ix]*dqdphi[ix] + dadq[centre][iy]*dqdphi[iy])
+            *(qMid[centre][ix]*qMid[centre][ix] + qMid[centre][iy]*qMid[centre][iy]);
+
+            sum4 += -eps_ab[phase*NUMPHASES + ip1]*ac[centre]*ac[centre]*2.0*(qMid[centre][ix]*dqdphi[ix] + qMid[centre][iy]*dqdphi[iy]);
+        }
+        
+    }
+
+    else if(DIMENSION == 3)
+    {
+            for (ip1 = 0; ip1 < NUMPHASES; ip1++)
         {
+            if (ip1 == phase)
+                continue;
+
+        /*
+         *  Find phiMid and gradPhiMid for phase beta
+         */
+
+            phiMid[1][centre] = phi[ip1][1][1][1];
+
+            phiMid[1][left]   = (phi[ip1][0][1][1] + phi[ip1][1][1][1])/2.0;
+            phiMid[1][right]  = (phi[ip1][2][1][1] + phi[ip1][1][1][1])/2.0;
+
+        
+            phiMid[1][top]    = (phi[ip1][1][0][1] + phi[ip1][1][1][1])/2.0;
+            phiMid[1][bottom] = (phi[ip1][1][2][1] + phi[ip1][1][1][1])/2.0;
+        
+
+        
+            phiMid[1][front]  = (phi[ip1][1][1][0] + phi[ip1][1][1][1])/2.0;
+            phiMid[1][back]   = (phi[ip1][1][1][2] + phi[ip1][1][1][1])/2.0;
+        
+
+            gradPhiMid[1][centre][ix] = (phi[ip1][2][1][1] - phi[ip1][0][1][1])/(2.0*DELTA_X);
+            gradPhiMid[1][left][ix]   = (phi[ip1][1][1][1] - phi[ip1][0][1][1])/(DELTA_X);
+            gradPhiMid[1][right][ix]  = (phi[ip1][2][1][1] - phi[ip1][1][1][1])/(DELTA_X);
+
+        
+            gradPhiMid[1][top][ix]    = ((phi[ip1][2][0][1] - phi[ip1][0][0][1])/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
+            gradPhiMid[1][bottom][ix] = ((phi[ip1][2][2][1] - phi[ip1][0][2][1])/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
+
+            
+            gradPhiMid[1][front][ix]  = ((phi[ip1][2][1][0] - phi[ip1][0][1][0])/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
+            gradPhiMid[1][back][ix]   = ((phi[ip1][2][1][2] - phi[ip1][0][1][2])/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
+            
+        
+
+    
+            gradPhiMid[1][centre][iy] = (phi[ip1][1][2][1] - phi[ip1][1][0][1])/(2.0*DELTA_Y);
+            gradPhiMid[1][left][iy]   = ((phi[ip1][0][2][1] - phi[ip1][0][0][1])/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
+            gradPhiMid[1][right][iy]  = ((phi[ip1][2][2][1] - phi[ip1][2][0][1])/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
+            gradPhiMid[1][top][iy]    = (phi[ip1][1][1][1] - phi[ip1][1][0][1])/(DELTA_Y);
+            gradPhiMid[1][bottom][iy] = (phi[ip1][1][2][1] - phi[ip1][1][1][1])/(DELTA_Y);
+
+            
+            gradPhiMid[1][front][iy]  = ((phi[ip1][1][2][0] - phi[ip1][1][0][0])/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
+            gradPhiMid[1][back][iy]   = ((phi[ip1][1][2][2] - phi[ip1][1][0][2])/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
+            
+    
             gradPhiMid[1][centre][iz] = (phi[ip1][1][1][2] - phi[ip1][1][1][0])/(2.0*DELTA_Z);
             gradPhiMid[1][left][iz]   = ((phi[ip1][0][1][2] - phi[ip1][0][1][0])/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
             gradPhiMid[1][right][iz]  = ((phi[ip1][2][1][2] - phi[ip1][2][1][0])/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
@@ -293,7 +399,7 @@ double calcAnisotropy_02(double phi[MAX_NUM_PHASES][3][3][3],
             gradPhiMid[1][bottom][iz] = ((phi[ip1][1][2][2] - phi[ip1][1][2][0])/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
             gradPhiMid[1][front][iz]  = (phi[ip1][1][1][1] - phi[ip1][1][1][0])/(DELTA_Z);
             gradPhiMid[1][back][iz]   = (phi[ip1][1][1][2] - phi[ip1][1][1][1])/(DELTA_Z);
-        }
+        
 
         /*
          * q_x_i-1/2, q_x_i+1/2, q_x_j-1/2, q_x_j+1/2, q_x_k-1/2, q_x_k+1/2, ... , q_z_k+1/2
@@ -302,135 +408,75 @@ double calcAnisotropy_02(double phi[MAX_NUM_PHASES][3][3][3],
          *
          */
 
-        for (i = 0; i < 7; i++)
-        {
-            qMid[i][ix] = phiMid[0][i]*gradPhiMid[1][i][ix] - phiMid[1][i]*gradPhiMid[0][i][ix];
-            if (DIMENSION >= 2)
+            for (i = 0; i < 7; i++)
             {
-                qMid[i][iy] = phiMid[0][i]*gradPhiMid[1][i][iy] - phiMid[1][i]*gradPhiMid[0][i][iy];
-                if (DIMENSION == 3)
-                {
-                    qMid[i][iz] = phiMid[0][i]*gradPhiMid[1][i][iz] - phiMid[1][i]*gradPhiMid[0][i][iz];
-                }
-                else
-                {
-                    qMid[i][iz] = 0.0;
-                }
+                qMid[i][ix] = phiMid[0][i]*gradPhiMid[1][i][ix] - phiMid[1][i]*gradPhiMid[0][i][ix];
+                qMid[i][iy] = phiMid[0][i]*gradPhiMid[1][i][iy] - phiMid[1][i]*gradPhiMid[0][i][iy];   
+                qMid[i][iz] = phiMid[0][i]*gradPhiMid[1][i][iz] - phiMid[1][i]*gradPhiMid[0][i][iz];     
             }
-            else
+
+            /*
+             * Get a_{c}(q_{ab}) and da_{c}/dq
+             */
+
+            for (i = 0; i < 7; i++)
             {
-                qMid[i][iy] = 0.0;
+                ac[i] = anisotropy_01_function_ac(qMid[i], phase, ip1, dab, NUMPHASES);
+                anisotropy_01_dAdq(qMid[i], dadq[i], phase, ip1, dab, NUMPHASES);
             }
-        }
 
-        /*
-         * Get a_{c}(q_{ab}) and da_{c}/dq
-         */
+            dqdphi[ix] = gradPhiMid[1][centre][ix];
 
-        for (i = 0; i < 7; i++)
-        {
-            ac[i] = anisotropy_01_function_ac(qMid[i], phase, ip1, dab, NUMPHASES);
-            anisotropy_01_dAdq(qMid[i], dadq[i], phase, ip1, dab, NUMPHASES);
-        }
-
-        dqdphi[ix] = gradPhiMid[1][centre][ix];
-        if (DIMENSION >= 2)
-        {
             dqdphi[iy] = gradPhiMid[1][centre][iy];
-            if (DIMENSION == 3)
-            {
-                dqdphi[iz] = gradPhiMid[1][centre][iz];
-            }
-        }
+                
+            dqdphi[iz] = gradPhiMid[1][centre][iz];
+            
+    
+            sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[right]*dadq[right][ix]*-phiMid[1][right]
+            *(qMid[right][ix]*qMid[right][ix] + qMid[right][iy]*qMid[right][iy] + qMid[right][iz]*qMid[right][iz])
+            )/DELTA_X;
+            sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[left]*dadq[left][ix]*-phiMid[1][left]
+            *(qMid[left][ix]*qMid[left][ix] + qMid[left][iy]*qMid[left][iy] + qMid[left][iz]*qMid[left][iz])
+            )/DELTA_X;
 
-        /*
-         * sum1 ->  eps_ab * div(2ac(q) * dacdq * dqdgradphi_a * gradphi_a * gradphi_b)
-         *          where dqdgradphi_a = -phi_b
-         *
-         */
-
-        /*
-         * (i+1/2, j, k) - (i-1/2, j, k)
-         */
-        sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[right]*dadq[right][ix]*-phiMid[1][right]
-        *(qMid[right][ix]*qMid[right][ix] + qMid[right][iy]*qMid[right][iy] + qMid[right][iz]*qMid[right][iz])
-        )/DELTA_X;
-        sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[left]*dadq[left][ix]*-phiMid[1][left]
-        *(qMid[left][ix]*qMid[left][ix] + qMid[left][iy]*qMid[left][iy] + qMid[left][iz]*qMid[left][iz])
-        )/DELTA_X;
-
-        /*
-         * (i, j+1/2, k) - (i, j-1/2, k)
-         */
-        if (DIMENSION >= 2)
-        {
+       
             sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*dadq[bottom][iy]*-phiMid[1][bottom]
             *(qMid[bottom][ix]*qMid[bottom][ix] + qMid[bottom][iy]*qMid[bottom][iy] + qMid[bottom][iz]*qMid[bottom][iz])
             )/DELTA_Y;
             sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[top]*dadq[top][iy]*-phiMid[1][top]
             *(qMid[top][ix]*qMid[top][ix] + qMid[top][iy]*qMid[top][iy] + qMid[top][iz]*qMid[top][iz])
             )/DELTA_Y;
-        }
-        /*
-         * (i, j, k+1/2) - (i, j, k-1/2)
-         */
-        if (DIMENSION == 3)
-        {
+        
+       
             sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[back]*dadq[back][iz]*-phiMid[1][back]
             *(qMid[back][ix]*qMid[back][ix] + qMid[back][iy]*qMid[back][iy] + qMid[back][iz]*qMid[back][iz])
             )/DELTA_Z;
             sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[front]*dadq[front][iz]*-phiMid[1][front]
             *(qMid[front][ix]*qMid[front][ix] + qMid[front][iy]*qMid[front][iy] + qMid[front][iz]*qMid[front][iz])
             )/DELTA_Z;
-        }
-        /*
-         * sum2 -> eps_ab * div(ac*ac*gradphi_b)
-         *
-         */
-        sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[right]*ac[right]*2.0*qMid[right][ix]*-phiMid[1][right]/DELTA_X;
-        sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[left]*ac[left]*2.0*qMid[left][ix]*-phiMid[1][left]/DELTA_X;
+        
+            /*
+             * sum2 -> eps_ab * div(ac*ac*gradphi_b)
+             *
+             */
+            sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[right]*ac[right]*2.0*qMid[right][ix]*-phiMid[1][right]/DELTA_X;
+            sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[left]*ac[left]*2.0*qMid[left][ix]*-phiMid[1][left]/DELTA_X;
 
-        if (DIMENSION >= 2)
-        {
+        
             sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*ac[bottom]*2.0*qMid[bottom][iy]*-phiMid[1][bottom]/DELTA_Y;
             sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[top]*ac[top]*2.0*qMid[top][iy]*-phiMid[1][top]/DELTA_Y;
-            if (DIMENSION == 3)
-            {
-                sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[back]*ac[back]*2.0*qMid[back][iz]*-phiMid[1][back]/DELTA_Z;
-                sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[front]*ac[front]*2.0*qMid[front][iz]*-phiMid[1][front]/DELTA_Z;
-            }
-        }
-        /*
-         * sum3 -> eps_ab * -2ac * dadq * dqdphi_a * gradphi_a * gradphi_b
-         *
-         *         dqdphi_a = gradphi_b
-         */
-
-        if (DIMENSION == 1)
-        {
-            sum3 += -2.0*eps_ab[phase*NUMPHASES + ip1]*ac[centre]
-            *(dadq[centre][ix]*dqdphi[ix])
-            *(qMid[centre][ix]*qMid[centre][ix]);
-
-            sum4 += -eps_ab[phase*NUMPHASES + ip1]*ac[centre]*ac[centre]*2.0*(qMid[centre][ix]*dqdphi[ix]);
-        }
-        else if (DIMENSION == 2)
-        {
-            sum3 += -2.0*eps_ab[phase*NUMPHASES + ip1]*ac[centre]
-            *(dadq[centre][ix]*dqdphi[ix] + dadq[centre][iy]*dqdphi[iy])
-            *(qMid[centre][ix]*qMid[centre][ix] + qMid[centre][iy]*qMid[centre][iy]);
-
-            sum4 += -eps_ab[phase*NUMPHASES + ip1]*ac[centre]*ac[centre]*2.0*(qMid[centre][ix]*dqdphi[ix] + qMid[centre][iy]*dqdphi[iy]);
-        }
-        else if (DIMENSION == 3)
-        {
+                
+            sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[back]*ac[back]*2.0*qMid[back][iz]*-phiMid[1][back]/DELTA_Z;
+            sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[front]*ac[front]*2.0*qMid[front][iz]*-phiMid[1][front]/DELTA_Z;
+            
+        
             sum3 += -2.0*eps_ab[phase*NUMPHASES + ip1]*ac[centre]
             *(dadq[centre][ix]*dqdphi[ix] + dadq[centre][iy]*dqdphi[iy] + dadq[centre][iz]*dqdphi[iz])
             *(qMid[centre][ix]*qMid[centre][ix] + qMid[centre][iy]*qMid[centre][iy] + qMid[centre][iz]*qMid[centre][iz]);
 
             sum4 += -eps_ab[phase*NUMPHASES + ip1]*ac[centre]*ac[centre]*2.0*(qMid[centre][ix]*dqdphi[ix] + qMid[centre][iy]*dqdphi[iy] + qMid[centre][iz]*dqdphi[iz]);
-        }
+        }   
     }
 
-    return (sum1 + sum2 + sum3 + sum4);
+    return (sum1 + sum2 + sum3 + sum4);   
 }
