@@ -6,11 +6,9 @@
 #include <string.h>
 #include <mpi.h>
 #include <math.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
 
-#include "functionTau.cuh"
-#include "structures.h"
+#include "functionTau.hpp"
+#include "structures.hpp"
 #include "utilityFunctions.h"
 
 /*
