@@ -1,4 +1,5 @@
-#include "filling.h"
+#include "filling.hpp"
+#include <openacc.h>
 
 /*
  * Fills a cylinder at the location specified by the cylinder object
@@ -13,6 +14,7 @@ void fillCylinder(double *phi, cylinder Cylinder,
 
     double sum = 0.0;
 
+    #pragma acc parallel loop collapse(3) private(index, xG, yG, sum)
     for (x = subdomain.xS_r; x < subdomain.xE_r; x++)
     {
         for (y = subdomain.yS_r; y < subdomain.yE_r; y++)
@@ -81,6 +83,7 @@ void fillSphere(double *phi, sphere Sphere,
 
     double sum = 0.0;
 
+    #pragma acc parallel loop collapse(3) private(index, xG, yG, zG, sum)
     for (x = subdomain.xS_r; x < subdomain.xE_r; x++)
     {
         for (y = subdomain.yS_r; y < subdomain.yE_r; y++)
@@ -139,18 +142,17 @@ void fillSphere(double *phi, sphere Sphere,
         }
     }
 }
-
 void fillCube(double *phi, cube Cube,
               domainInfo simDomain, subdomainInfo subdomain)
 {
     long phaseStep = subdomain.numCompCells;
     long index;
     long xG, yG, zG;     // Global coordinates
-
     long x, y, z;
 
     double sum = 0.0;
 
+    #pragma acc parallel loop collapse(3) private(index, xG, yG, zG, sum)
     for (x = subdomain.xS_r; x < subdomain.xE_r; x++)
     {
         for (y = subdomain.yS_r; y < subdomain.yE_r; y++)
@@ -166,7 +168,7 @@ void fillCube(double *phi, cube Cube,
 
                 if (Cube.phase != simDomain.numPhases-1)
                 {
-                    // Circle (cylinder) interior/exterior check
+                    // Cube interior/exterior check
                     if (Cube.xS <= xG && Cube.xE >= xG && Cube.yS <= yG && Cube.yE >= yG && Cube.zS <= zG && Cube.zE >= zG)
                     {
                         for (long i = 0; i < simDomain.numPhases-1; i++)
@@ -213,11 +215,11 @@ void fillEllipse(double *phi, ellipse Ellipse,
     long phaseStep = subdomain.numCompCells;
     long index;
     long xG, yG, zG;     // Global coordinates
-
     long x, y, z;
 
     double sum = 0.0;
 
+    #pragma acc parallel loop collapse(3) private(index, xG, yG, zG, sum)
     for (x = subdomain.xS_r; x < subdomain.xE_r; x++)
     {
         for (y = subdomain.yS_r; y < subdomain.yE_r; y++)
@@ -233,7 +235,7 @@ void fillEllipse(double *phi, ellipse Ellipse,
 
                 if (Ellipse.phase != simDomain.numPhases-1)
                 {
-                    // Sphere interior/exterior check
+                    // Ellipse interior/exterior check
                     if ((Ellipse.xC - xG)*(Ellipse.xC - xG)
                         + (Ellipse.yC - yG)*(Ellipse.yC - yG)
                         + (Ellipse.zC - zG)*(Ellipse.zC - zG)
@@ -286,6 +288,7 @@ void fillComposition(double *phi, double *comp,
     long step = subdomain.numCompCells;
     long x, y, z;
 
+    #pragma acc parallel loop collapse(3) private(index, PHASE_FILLED)
     for (x = subdomain.xS_r; x < subdomain.xE_r; x++)
     {
         for (y = subdomain.yS_r; y < subdomain.yE_r; y++)
@@ -293,7 +296,6 @@ void fillComposition(double *phi, double *comp,
             for (z = subdomain.zS_r; z < subdomain.zE_r; z++)
             {
                 index = x*subdomain.xStep + y*subdomain.yStep + z;
-
                 PHASE_FILLED = 0;
 
                 for (long a = 0; a < simDomain.numPhases-1; a++)
@@ -313,7 +315,9 @@ void fillComposition(double *phi, double *comp,
                 if (!PHASE_FILLED)
                 {
                     for (long b = 0; b < simDomain.numComponents-1; b++)
+                    {
                         comp[b*step + index] = cfill[simDomain.numPhases-1][simDomain.numPhases-1][b];
+                    }
                 }
             }
         }
@@ -356,7 +360,6 @@ void fillDomain(domainInfo simDomain, subdomainInfo subdomain,
 
             free(Cylinder);
         }
-
         else if (fill->fillType[i] == FILLSPHERE)
         {
             Sphere = (sphere*)malloc(sizeof(sphere));
@@ -373,9 +376,9 @@ void fillDomain(domainInfo simDomain, subdomainInfo subdomain,
                 Sphere->phase = simDomain.numPhases-1;
                 fillSphere(phi, *Sphere, simDomain, subdomain);
             }
+
             free(Sphere);
         }
-
         else if (fill->fillType[i] == FILLCUBE)
         {
             Cube = (cube*)malloc(sizeof(cube));
@@ -394,21 +397,19 @@ void fillDomain(domainInfo simDomain, subdomainInfo subdomain,
                 Cube->phase = simDomain.numPhases-1;
                 fillCube(phi, *Cube, simDomain, subdomain);
             }
+
             free(Cube);
         }
-
         else if (fill->fillType[i] == FILLCYLINDERRANDOM)
         {
             double volParticle = (double)(fill->radius[i]*fill->radius[i])*M_PI;
             double volume      = (double)(simDomain.MESH_X*simDomain.MESH_Y);
-            long numParticles   =  ceil(volume*fill->volFrac[i] / volParticle);
+            long numParticles   = ceil(volume*fill->volFrac[i] / volParticle);
 
             simParams.SEED = clock();
-
             srand48(simParams.SEED);
 
             Cylinder = (cylinder*)malloc(sizeof(cylinder) * numParticles);
-
             long count = 0;
 
             for (long k = 0; k < numTrials; k++)
@@ -437,7 +438,6 @@ void fillDomain(domainInfo simDomain, subdomainInfo subdomain,
                 // Force cylinder to span the entire z-axis in the domain
                 Cylinder[count].zS = 0;
                 Cylinder[count].zE = simDomain.MESH_Z - 1;
-
                 Cylinder[count].phase = fill->phase[i];
 
                 long j = 0;
@@ -475,19 +475,16 @@ void fillDomain(domainInfo simDomain, subdomainInfo subdomain,
 
             free(Cylinder);
         }
-
         else if (fill->fillType[i] == FILLSPHERERANDOM)
         {
             double volParticle = (double)(fill->radius[i]*fill->radius[i]*fill->radius[i])*4.0*M_PI/3.0;
             double volume      = (double)(simDomain.MESH_X*simDomain.MESH_Y*simDomain.MESH_Z);
-            long numParticles   =  ceil(volume*fill->volFrac[i] / volParticle);
+            long numParticles   = ceil(volume*fill->volFrac[i] / volParticle);
 
             simParams.SEED = clock();
-
             srand48(simParams.SEED);
 
             Sphere = (sphere*)malloc(sizeof(sphere) * numParticles);
-
             long count = 0;
 
             for (long k = 0; k < numTrials; k++)
@@ -588,3 +585,4 @@ void fillDomain(domainInfo simDomain, subdomainInfo subdomain,
     free(fill->shieldDist);
     free(fill->radVar);
 }
+
