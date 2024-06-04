@@ -3,8 +3,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
 #include <math.h>
 #include <string.h>
 
@@ -13,11 +11,10 @@
 #endif
 
 #if THERMO == 1
-#include "Thermo.cuh"
+#include "Thermo.h"
 #endif
-#include "structures.h"
-
-#include "matrix.cuh"
+#include "structures.hpp"
+#include "matrix.hpp"
 
 void testThermoFuncs(domainInfo simDomain, simParameters simParams);
 
@@ -76,15 +73,15 @@ void Free3M(double ***Mat, long a, long b);
 void Free4M(double ****Mat, long a, long b, long c);
 
 /*
- * Allocate memory on GPU and create pointers to make access to each phase/component simpler
- * arr is a continguous block containing information for every phase/component in a linear order
+ * Allocate memory on device and create pointers to make access to each phase/component simpler
+ * arr is a contiguous block containing information for every phase/component in a linear order
  * arr2 is an array of pointers pointing to the start of each phase/comp block in device memory
  * N is the number of phases/components, and stride is the size of each block (numCompCells)
  */
 void allocOnDev(double **arr, double ***arr2, long N, long stride);
 
 /*
- * De-allocate memory on GPU and memory taken by related helper pointers
+ * De-allocate memory on device and memory taken by related helper pointers
  */
 void freeOnDev(double **arr, double ***arr2);
 
