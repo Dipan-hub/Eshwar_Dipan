@@ -1,11 +1,10 @@
-#ifndef FUNCTIONTAU_CUH_
-#define FUNCTIONTAU_CUH_
+#ifndef FUNCTIONTAU_HPP_
+#define FUNCTIONTAU_HPP_
 
-#include "structures.h"
-#include "matrix.cuh"
+#include "structures.hpp"
+#include "matrix.hpp"
 #include "utilityFunctions.h"
 
-extern __device__ __host__
 double FunctionTau(double **phi, double *relaxCoeff, long idx, long NUMPHASES);
 
 void calculateTau(domainInfo *simDomain, controls *simControls, simParameters *simParams);
