@@ -1,9 +1,9 @@
-#include "functionF.cuh"
+#include "functionF.hpp"
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
+#include <openacc.h>
 
-extern __device__
 double calcPhaseEnergy(double **phaseComp, long phase,
                        double *F0_A, double *F0_B, double *F0_C,
                        long idx,
@@ -15,6 +15,7 @@ double calcPhaseEnergy(double **phaseComp, long phase,
 
     long index1, index2;
 
+    #pragma acc parallel loop reduction(+:ans) private(index1, index2)
     for (long component1 = 0; component1 < NUMCOMPONENTS-1; component1++)
     {
         index1 = component1*NUMPHASES + phase;
@@ -34,7 +35,6 @@ double calcPhaseEnergy(double **phaseComp, long phase,
     return ans;
 }
 
-extern __device__
 double calcDiffusionPotential(double **phaseComp,
                               long phase, long component,
                               double *F0_A, double *F0_B,
@@ -46,6 +46,7 @@ double calcDiffusionPotential(double **phaseComp,
     // Rest of the quadratic terms are mixed
     double ans = 2.0*F0_A[(component + phase*(NUMCOMPONENTS-1))*(NUMCOMPONENTS-1) + component]*phaseComp[(phase + component*NUMPHASES)][idx];
 
+    #pragma acc parallel loop reduction(+:ans)
     for (long i = 0; i < NUMCOMPONENTS-1; i++)
     {
 
@@ -61,6 +62,7 @@ double calcDiffusionPotential(double **phaseComp,
 
     return ans;
 }
+
 
 void function_F_04_init_propertymatrices(domainInfo *simDomain, controls *simControls, simParameters *simParams)
 {
@@ -110,6 +112,7 @@ void function_F_04_init_propertymatrices(domainInfo *simDomain, controls *simCon
     double   **T_ES    = MallocM(simDomain->numThermoPhases, numlines);
     double   **T_ThF   = MallocM(simDomain->numThermoPhases, numlines);
 
+    #pragma acc parallel loop collapse(2)
     for (a = 0; a < simDomain->numThermoPhases-1; a++)
     {
         sprintf(filename, "tdbs_encrypted/Composition_%s.csv", simDomain->phases_tdb[a]);
@@ -131,6 +134,7 @@ void function_F_04_init_propertymatrices(domainInfo *simDomain, controls *simCon
         fclose(fp);
     }
 
+    #pragma acc parallel loop collapse(2)
     for (a = 0; a < simDomain->numThermoPhases; a++)
     {
         sprintf(filename,"tdbs_encrypted/HSN_%s.csv", simDomain->phases_tdb[a]);
@@ -161,6 +165,7 @@ void function_F_04_init_propertymatrices(domainInfo *simDomain, controls *simCon
     gsl_interp_accel ****acc_ThF    = (gsl_interp_accel****)malloc(simDomain->numThermoPhases*sizeof(gsl_interp_accel***));
     gsl_spline       ****spline_ThF = (gsl_spline****)malloc(simDomain->numThermoPhases*sizeof(gsl_spline***));
 
+    #pragma acc parallel loop
     for (a = 0; a < simDomain->numThermoPhases; a++)
     {
         acc_ThF[a]    = (gsl_interp_accel***)malloc((simDomain->numComponents-1)*sizeof(gsl_interp_accel**));
@@ -180,6 +185,7 @@ void function_F_04_init_propertymatrices(domainInfo *simDomain, controls *simCon
         }
     }
 
+    #pragma acc parallel loop
     for (a = 0; a < simDomain->numThermoPhases-1; a++)
     {
         acc_ES[a]     = (gsl_interp_accel***)malloc((simDomain->numComponents-1)*sizeof(gsl_interp_accel**));
@@ -205,6 +211,7 @@ void function_F_04_init_propertymatrices(domainInfo *simDomain, controls *simCon
     FreeM(T_ThF, simDomain->numThermoPhases);
 
     // function_F_04_function_A
+    #pragma acc parallel loop collapse(3)
     for (a = 0; a < simDomain->numPhases; a++)
     {
         for(i = 0; i<simDomain->numComponents-1; i++)
@@ -229,6 +236,7 @@ void function_F_04_init_propertymatrices(domainInfo *simDomain, controls *simCon
 
     double sum_c = 0.0;
 
+    #pragma acc parallel loop collapse(3) private(sum_c)
     for (a = 0; a < simDomain->numPhases; a++)
     {
         if (a == simDomain->numPhases-1)
@@ -277,15 +285,18 @@ void function_F_04_init_propertymatrices(domainInfo *simDomain, controls *simCon
     }
 }
 
+
 void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParameters *simParams)
 {
 
     if (simControls->FUNCTION_F == 1)
     {
+        #pragma acc parallel loop
         for (long i = 0; i < simDomain->numComponents-1; i++)
             simParams->F0_B_host[simDomain->numPhases-1][i] = 0.0;
         simParams->F0_C_host[simDomain->numPhases-1] = 0.0;
 
+        #pragma acc parallel loop collapse(3)
         for (long i = 0; i < simDomain->numPhases-1; i++)
         {
             simParams->F0_C_host[i] = 0.0;
@@ -310,6 +321,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
     }
     else if (simControls->FUNCTION_F == 2)
     {
+        #pragma acc parallel loop collapse(2)
         for (long a = 0; a < simDomain->numPhases; a++)
         {
             for (long b = 0; b < simDomain->numThermoPhases; b++)
@@ -324,6 +336,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
     else if (simControls->FUNCTION_F == 3)
     {
         // Mapping thermodynamic phases to the simulated phases
+        #pragma acc parallel loop collapse(2)
         for (long a = 0; a < simDomain->numPhases; a++)
         {
             for (long b = 0; b < simDomain->numThermoPhases; b++)
@@ -351,6 +364,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
             /*
              *   function_A((T+Teq)*0.5), ceq);
              */
+            #pragma acc parallel loop private(sum)
             for (a = 0; a < simDomain->numPhases; a++)
             {
                 sum = 0.0;
@@ -389,6 +403,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
             /*
              *  function_F_03_ComputeSlopes((T+Teq)*0.5, a);
              */
+            #pragma acc parallel loop private(sum)
             for (a = 0; a < simDomain->numPhases-1; a++)
             {
                 // long   index;
@@ -475,6 +490,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
             /*
              *  function_A(T, c_guess);
              */
+            #pragma acc parallel loop collapse(2) private(sum)
             for (a = 0; a < simDomain->numPhases; a++)
             {
                 sum = 0.0;
@@ -509,7 +525,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
                 }
             }
 
-
+            #pragma acc parallel loop collapse(3) private(sum_c)
             for (a = 0; a < simDomain->numPhases-1; a++)
             {
                 simParams->DELTA_T[a][simDomain->numPhases-1] = 0.0;
@@ -521,11 +537,13 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
                     simParams->DELTA_T[a][simDomain->numPhases-1] += simParams->slopes[a][simDomain->numPhases-1][k]*(simParams->ceq_host[a][simDomain->numPhases-1][k] - simParams->ceq_host[a][a][k]);
                     simParams->DELTA_C[a][k]                       = simParams->ceq_host[a][simDomain->numPhases-1][k] - simParams->ceq_host[a][a][k];
                 }
+
                 for (k = 0; k < simDomain->numComponents-1; k++)
                 {
                     simParams->dcbdT[a][a][k] = simParams->DELTA_C[a][k]/simParams->DELTA_T[a][a];
                     simParams->dcbdT[a][simDomain->numPhases-1][k] = simParams->DELTA_C[a][k]/simParams->DELTA_T[a][simDomain->numPhases-1];
                 }
+
                 for (k = 0; k < simDomain->numComponents-1; k++)
                 {
                     simParams->dBbdT[a][k] = 2.0*(simParams->F0_A_host[simDomain->numPhases-1][k][k]*simParams->dcbdT[a][simDomain->numPhases-1][k] - simParams->F0_A_host[a][k][k]*simParams->dcbdT[a][a][k]);
@@ -539,6 +557,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
                 }
             }
 
+            #pragma acc parallel loop
             for (k = 0; k < simDomain->numComponents-1; k++)
             {
                 simParams->dBbdT[simDomain->numPhases-1][k] = 0.0;
@@ -547,6 +566,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
             /*
              *  Beq, function_B
              */
+            #pragma acc parallel loop collapse(2) private(sum_c)
             for (a = 0; a < simDomain->numPhases; a++)
             {
                 for (i = 0; i < simDomain->numComponents-1; i++)
@@ -575,6 +595,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
                 }
             }
 
+            #pragma acc parallel loop collapse(2) private(sum_c)
             for (a = 0; a < simDomain->numPhases; a++)
             {
                 for (i = 0; i < simDomain->numComponents-1; i++)
@@ -604,6 +625,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
                 }
             }
 
+            #pragma acc parallel loop private(sum_c)
             for (a = 0; a < simDomain->numPhases; a++)
             {
                 double c_liq[simDomain->numComponents-1];
@@ -650,6 +672,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
             /*
              *  function_A(T, c_guess);
              */
+            #pragma acc parallel loop private(sum)
             for (long a = 0; a < simDomain->numPhases; a++)
             {
                 sum = 0.0;
@@ -690,6 +713,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
 
             double sum_c = 0.0;
 
+            #pragma acc parallel loop collapse(3) private(sum_c)
             for (long a = 0; a < simDomain->numPhases; a++)
             {
                 if (a == simDomain->numPhases-1)
@@ -746,6 +770,7 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
     {
         if (simControls->count == simControls->startTime)
         {
+            #pragma acc parallel loop collapse(2)
             for (long a = 0; a < simDomain->numPhases; a++)
             {
                 for (long b = 0; b < simDomain->numThermoPhases; b++)
@@ -764,3 +789,4 @@ void calcFreeEnergyCoeffs(domainInfo *simDomain, controls *simControls, simParam
 
     }
 }
+
