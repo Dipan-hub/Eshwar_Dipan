@@ -1,4 +1,4 @@
-#include "calc_bn.h"
+#include "calc_bn.hpp"
 
 #if ENABLE_CUFFTMP == 1
 
@@ -18,13 +18,17 @@ void eval_lambda(double C[6][6], double lambda[3][3][3][3])
 {
     int i, j, k, l, m, n;
 
+    #pragma acc parallel loop collapse(4) private(i, j, k, l)
     for (i = 0; i < 3; ++i)
         for (j = 0; j < 3; ++j)
             for (k = 0; k < 3; ++k)
                 for (l = 0; l < 3; ++l)
                     lambda[i][j][k][l] = 0.0;
+                    
     m = 0;
     n = 0;
+
+    #pragma acc parallel loop collapse(4) private(i, j, k, l, m, n)
     for (i = 0; i < 3; ++i)
         for (j = 0; j < 3; ++j)
             for (k = 0; k < 3; ++k)
@@ -60,10 +64,12 @@ void calc_inv_omega(double kx, double ky, double kz,
     n[1] = ky;
     n[2] = kz;
 
+    #pragma acc parallel loop collapse(2) private(i, j)
     for (i = 0; i < 3; ++i)
         for (j = 0; j < 3; ++j)
             inv_omega[i][j] = 0.0;
 
+    #pragma acc parallel loop collapse(4) private(i, j, k, l)
     for (i = 0; i < 3; ++i)
         for (j = 0; j < 3; ++j)
             for (k = 0; k < 3; ++k)
@@ -76,6 +82,7 @@ void calc_inverse(double a[3][3], double ainv[3][3])
     int i, j;
     double det;
 
+    #pragma acc parallel loop collapse(2) private(i, j)
     for (i = 0; i < 3; ++i)
         for( j = 0; j < 3; ++j)
             ainv[i][j] = 0.0;
@@ -103,10 +110,12 @@ void calc_stress(double eigen_strn[3][3], double lambda[3][3][3][3],
 {
     int i, j, k, l;
 
+    #pragma acc parallel loop collapse(2) private(i, j)
     for (i = 0; i < 3; ++i)
         for (j = 0; j < 3; ++j)
             stress[i][j] = 0.0;
 
+    #pragma acc parallel loop collapse(4) private(i, j, k, l)
     for (i = 0; i < 3; ++i)
         for (j = 0; j < 3; ++j)
             for (k = 0; k < 3; ++k)
@@ -127,6 +136,7 @@ double stress2[3][3], double lambda[3][3][3][3])
 
     Bn = 0.0;
 
+    #pragma acc parallel loop collapse(4) reduction(+:Bn) private(i, j, k, l)
     for (i = 0; i < 3; ++i)
         for (j = 0; j < 3; ++j)
             for (k = 0; k < 3; ++k)
@@ -148,6 +158,7 @@ void calculate_Bn(double *B, double *kx, double *ky, double *kz, domainInfo simD
     cub_el[1] = (simParams.Stiffness_c[p].C12 + simParams.Stiffness_c[q].C12)/2.0;
     cub_el[2] = (simParams.Stiffness_c[p].C44 + simParams.Stiffness_c[q].C44)/2.0;
 
+    #pragma acc parallel loop collapse(2) private(i, j)
     for (i = 0; i < 6; ++i)
         for (j = 0; j < 6; ++j)
             C[i][j] = 0.0;
@@ -183,6 +194,10 @@ void calculate_Bn(double *B, double *kx, double *ky, double *kz, domainInfo simD
     calc_stress(eigen_strn0, lambda, stress1);
     calc_stress(eigen_strn1, lambda, stress2);
 
+     //#pragma acc data copyin(lambda[0:3][0:3][0:3][0:3], kx[0:subdomain.numX*subdomain.numY*subdomain.numZ], ky[0:subdomain.numX*subdomain.numY*subdomain.numZ], kz[0:subdomain.numX*subdomain.numY*subdomain.numZ], eigen_strn0[0:3][0:3], eigen_strn1[0:3][0:3], stress1[0:3][0:3], stress2[0:3][0:3]) copyout(B[0:subdomain.numX*subdomain.numY*subdomain.numZ])
+   //  { //if subdomain.numX doesnt create problem we can use this
+    #pragma acc parallel loop collapse(3) private(x, y, z, omega, inv_omega)
+    {
     for (x = 0; x < subdomain.numX; x++)
     {
         for (y = 0; y < subdomain.numY; y++)
@@ -200,6 +215,11 @@ void calculate_Bn(double *B, double *kx, double *ky, double *kz, domainInfo simD
             }
         }
     }
+    
+    }
+    //}
 }
 
 #endif
+
+
