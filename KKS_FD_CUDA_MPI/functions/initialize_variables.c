@@ -1,4 +1,5 @@
 #include "initialize_variables.h"
+#include <openacc.h>
 
 /*
  *  Distributing the domain to all the MPI processes
@@ -19,9 +20,11 @@ void decomposeDomain(domainInfo simDomain, controls *simControls, subdomainInfo 
      */
     if (simDomain.DIMENSION == 3)
     {
-        // z-axis
-        subdomain->zS = 0;
-        subdomain->zE = simDomain.MESH_Z;
+        #pragma acc parallel loop present(simDomain, subdomain, simControls)
+        {
+            // z-axis
+            subdomain->zS = 0;
+            subdomain->zE = simDomain.MESH_Z;
 
         subdomain->zS_c = 0;
         subdomain->zE_c = simDomain.MESH_Z + 2*subdomain->padding;
@@ -29,90 +32,96 @@ void decomposeDomain(domainInfo simDomain, controls *simControls, subdomainInfo 
         subdomain->zS_r = subdomain->padding;
         subdomain->zE_r = simDomain.MESH_Z + subdomain->padding;
 
-        subdomain->numZ = subdomain->zE - subdomain->zS ;
-        subdomain->sizeZ = subdomain->zE_c - subdomain->zS_c;
-        subdomain->numCells = subdomain->numZ;
-        subdomain->numCompCells = subdomain->sizeZ;
+            subdomain->numZ = subdomain->zE - subdomain->zS ;
+            subdomain->sizeZ = subdomain->zE_c - subdomain->zS_c;
+            subdomain->numCells = subdomain->numZ;
+            subdomain->numCompCells = subdomain->sizeZ;
 
-        // y-axis
-        subdomain->yS = 0;
-        subdomain->yE = simDomain.MESH_Y;
+            // y-axis
+            subdomain->yS = 0;
+            subdomain->yE = simDomain.MESH_Y;
 
-        subdomain->yS_c = 0;
-        subdomain->yE_c = simDomain.MESH_Y + 2*subdomain->padding;
+            subdomain->yS_c = 0;
+            subdomain->yE_c = simDomain.MESH_Y + 2*subdomain->padding;
 
-        subdomain->yS_r = subdomain->padding;
-        subdomain->yE_r = simDomain.MESH_Y + subdomain->padding;
+            subdomain->yS_r = subdomain->padding;
+            subdomain->yE_r = simDomain.MESH_Y + subdomain->padding;
 
-        subdomain->numY = subdomain->yE - subdomain->yS;
-        subdomain->sizeY = subdomain->yE_c - subdomain->yS_c;
-        subdomain->numCells *= subdomain->numY;
-        subdomain->numCompCells *= subdomain->sizeY;
+            subdomain->numY = subdomain->yE - subdomain->yS;
+            subdomain->sizeY = subdomain->yE_c - subdomain->yS_c;
+            subdomain->numCells *= subdomain->numY;
+            subdomain->numCompCells *= subdomain->sizeY;
+        }
     }
     else if (simDomain.DIMENSION == 2)
     {
-        // z-axis
-        subdomain->zS = 0;
-        subdomain->zE = 1;
+        #pragma acc parallel loop present(simDomain, subdomain, simControls)
+        {
+            // z-axis
+            subdomain->zS = 0;
+            subdomain->zE = 1;
 
-        subdomain->zS_c = 0;
-        subdomain->zE_c = 1;
+            subdomain->zS_c = 0;
+            subdomain->zE_c = 1;
 
-        subdomain->zS_r = 0;
-        subdomain->zE_r = 1;
+            subdomain->zS_r = 0;
+            subdomain->zE_r = 1;
 
-        subdomain->numZ = subdomain->zE - subdomain->zS;
-        subdomain->sizeZ = subdomain->zE_c - subdomain->zS_c;
-        subdomain->numCells = subdomain->numZ;
-        subdomain->numCompCells = subdomain->sizeZ;
+            subdomain->numZ = subdomain->zE - subdomain->zS;
+            subdomain->sizeZ = subdomain->zE_c - subdomain->zS_c;
+            subdomain->numCells = subdomain->numZ;
+            subdomain->numCompCells = subdomain->sizeZ;
 
-        // y-axis
-        subdomain->yS = 0;
-        subdomain->yE = simDomain.MESH_Y;
+            // y-axis
+            subdomain->yS = 0;
+            subdomain->yE = simDomain.MESH_Y;
 
-        subdomain->yS_c = 0;
-        subdomain->yE_c = simDomain.MESH_Y + 2*subdomain->padding;
+            subdomain->yS_c = 0;
+            subdomain->yE_c = simDomain.MESH_Y + 2*subdomain->padding;
 
-        subdomain->yS_r = subdomain->padding;
-        subdomain->yE_r = simDomain.MESH_Y + subdomain->padding;
+            subdomain->yS_r = subdomain->padding;
+            subdomain->yE_r = simDomain.MESH_Y + subdomain->padding;
 
-        subdomain->numY = subdomain->yE - subdomain->yS;
-        subdomain->sizeY = subdomain->yE_c - subdomain->yS_c;
-        subdomain->numCells *= subdomain->numY;
-        subdomain->numCompCells *= subdomain->sizeY;
-
+            subdomain->numY = subdomain->yE - subdomain->yS;
+            subdomain->sizeY = subdomain->yE_c - subdomain->yS_c;
+            subdomain->numCells *= subdomain->numY;
+            subdomain->numCompCells *= subdomain->sizeY;
+        }
     }
     else if (simDomain.DIMENSION == 1)
     {
-        // z-axis
-        subdomain->zS = 0;
-        subdomain->zE = 1;
+        #pragma acc parallel loop present(simDomain, subdomain, simControls)
+        {
+            // z-axis
+            subdomain->zS = 0;
+            subdomain->zE = 1;
 
-        subdomain->zS_c = 0;
-        subdomain->zE_c = 1;
+            subdomain->zS_c = 0;
+            subdomain->zE_c = 1;
 
-        subdomain->zS_r = 0;
-        subdomain->zE_r = 1;
+            subdomain->zS_r = 0;
+            subdomain->zE_r = 1;
 
-        subdomain->numZ = subdomain->zE - subdomain->zS;
-        subdomain->sizeZ = subdomain->zE_c - subdomain->zS_c;
-        subdomain->numCells = subdomain->numZ;
-        subdomain->numCompCells = subdomain->sizeZ;
+            subdomain->numZ = subdomain->zE - subdomain->zS;
+            subdomain->sizeZ = subdomain->zE_c - subdomain->zS_c;
+            subdomain->numCells = subdomain->numZ;
+            subdomain->numCompCells = subdomain->sizeZ;
 
-        // y-axis
-        subdomain->yS = 0;
-        subdomain->yE = 1;
+            // y-axis
+            subdomain->yS = 0;
+            subdomain->yE = 1;
 
-        subdomain->yS_c = 0;
-        subdomain->yE_c = 1;
+            subdomain->yS_c = 0;
+            subdomain->yE_c = 1;
 
-        subdomain->yS_r = 0;
-        subdomain->yE_r = 1;
+            subdomain->yS_r = 0;
+            subdomain->yE_r = 1;
 
-        subdomain->numY = subdomain->yE - subdomain->yS;
-        subdomain->sizeY = subdomain->yE_c - subdomain->yS_c;
-        subdomain->numCells *= subdomain->numY;
-        subdomain->numCompCells *= subdomain->sizeY;
+            subdomain->numY = subdomain->yE - subdomain->yS;
+            subdomain->sizeY = subdomain->yE_c - subdomain->yS_c;
+            subdomain->numCells *= subdomain->numY;
+            subdomain->numCompCells *= subdomain->sizeY;
+        }
     }
 
     // Decomposing along the x-axis
@@ -178,6 +187,12 @@ void decomposeDomain(domainInfo simDomain, controls *simControls, subdomainInfo 
     }
 }
 
+
+
+
+
+
+
 /*
  *  All simulation constants are calculated here using parameters read from the input file
  *
@@ -192,6 +207,7 @@ void moveParamsToGPU(domainInfo *simDomain, controls *simControls, simParameters
     MPI_Comm_rank(comm, &rank);
 
     // Calculate kappa, theta
+    #pragma acc parallel loop present(simDomain, simParams)
     for (int i = 0; i < simDomain->numPhases; i++)
     {
         simParams->theta_i_host[i] = 0.0;
@@ -213,27 +229,13 @@ void moveParamsToGPU(domainInfo *simDomain, controls *simControls, simParameters
 
     simControls->antiTrapping = 1;
 
-    // for (int i = 0; i < simDomain->numPhases; i++)
-    // {
-    //     for (int j = 0; j < simDomain->numComponents-1; j++)
-    //     {
-    //         for (int k = 0; k < simDomain->numComponents-1; k++)
-    //         {
-    //             if (simParams->diffusivity_host[i][j][k] == 0.0)
-    //             {
-    //                 simControls->antiTrapping = 1;
-    //             }
-    //         }
-    //     }
-    // }
-
     // Eigen-strain
+    #pragma acc parallel loop present(simDomain, simParams, simControls)
     for (int i = 0; i < simDomain->numPhases; i++)
     {
         if (simParams->eigen_strain[i].xx == 0.0 && simParams->eigen_strain[i].yy == 0.0 && simParams->eigen_strain[i].zz == 0.0 && simParams->eigen_strain[i].xy == 0.0 && simParams->eigen_strain[i].xz == 0.0 && simParams->eigen_strain[i].yz == 0.0)
         {
             simControls->eigenSwitch[i] = 0;
-
         }
         else
         {
@@ -244,55 +246,71 @@ void moveParamsToGPU(domainInfo *simDomain, controls *simControls, simParameters
     // Calculate phase-field mobility
     calculateTau(simDomain, simControls, simParams);
 
-    // Move to GPU
-    cudaMemcpy(simDomain->thermo_phase_dev, simDomain->thermo_phase_host, sizeof(long)*simDomain->numPhases, cudaMemcpyHostToDevice);
+    // Move to GPU using OpenACC data directives
+    #pragma acc enter data copyin(simDomain[:1])
+    #pragma acc enter data copyin(simParams[:1])
+    #pragma acc enter data copyin(simDomain->thermo_phase_host[:simDomain->numPhases])
+    #pragma acc enter data copyin(simParams->F0_C_host[:simDomain->numPhases])
+    #pragma acc enter data copyin(simParams->theta_i_host[:simDomain->numPhases])
+    #pragma acc enter data copyin(simParams->gamma_host[:simDomain->numPhases][:simDomain->numPhases])
+    #pragma acc enter data copyin(simParams->relax_coeff_host[:simDomain->numPhases][:simDomain->numPhases])
+    #pragma acc enter data copyin(simParams->theta_ij_host[:simDomain->numPhases][:simDomain->numPhases])
+    #pragma acc enter data copyin(simParams->kappaPhi_host[:simDomain->numPhases][:simDomain->numPhases])
+    #pragma acc enter data copyin(simParams->dab_host[:simDomain->numPhases][:simDomain->numPhases])
+    #pragma acc enter data copyin(simParams->Rotation_matrix_host[:simDomain->numPhases][:simDomain->numPhases][:3][:3])
+    #pragma acc enter data copyin(simParams->Inv_Rotation_matrix_host[:simDomain->numPhases][:simDomain->numPhases][:3][:3])
+    #pragma acc enter data copyin(simParams->theta_ijk_host[:simDomain->numPhases][:simDomain->numPhases][:simDomain->numPhases])
+    #pragma acc enter data copyin(simParams->ceq_host[:simDomain->numPhases][:simDomain->numPhases][:simDomain->numComponents-1])
+    #pragma acc enter data copyin(simParams->cfill_host[:simDomain->numPhases][:simDomain->numPhases][:simDomain->numComponents-1])
+    #pragma acc enter data copyin(simParams->cguess_host[:simDomain->numPhases][:simDomain->numPhases][:simDomain->numComponents-1])
+    #pragma acc enter data copyin(simParams->F0_B_host[:simDomain->numPhases][:simDomain->numComponents-1])
+    #pragma acc enter data copyin(simParams->mobility_host[:simDomain->numPhases][:simDomain->numComponents-1][:simDomain->numComponents-1])
+    #pragma acc enter data copyin(simParams->diffusivity_host[:simDomain->numPhases][:simDomain->numComponents-1][:simDomain->numComponents-1])
+    #pragma acc enter data copyin(simParams->F0_A_host[:simDomain->numPhases][:simDomain->numComponents-1][:simDomain->numComponents-1])
 
+    #pragma acc parallel loop present(simDomain, simParams)
     for (int i = 0; i < simDomain->numPhases; i++)
     {
-        cudaMemcpy(&simParams->F0_C_dev[i], &simParams->F0_C_host[i], sizeof(double), cudaMemcpyHostToDevice);
-        cudaMemcpy(&simParams->theta_i_dev[i], &simParams->theta_i_host[i], sizeof(double), cudaMemcpyHostToDevice);
-
+        #pragma acc loop
         for (int j = 0; j < simDomain->numPhases; j++)
         {
-            cudaMemcpy(&simParams->gamma_dev[i*simDomain->numPhases + j], &simParams->gamma_host[i][j], sizeof(double), cudaMemcpyHostToDevice);
-            cudaMemcpy(&simParams->relax_coeff_dev[i*simDomain->numPhases + j], &simParams->relax_coeff_host[i][j], sizeof(double), cudaMemcpyHostToDevice);
-            cudaMemcpy(&simParams->theta_ij_dev[i*simDomain->numPhases + j], &simParams->theta_ij_host[i][j], sizeof(double), cudaMemcpyHostToDevice);
-            cudaMemcpy(&simParams->kappaPhi_dev[i*simDomain->numPhases + j], &simParams->kappaPhi_host[i][j], sizeof(double),cudaMemcpyHostToDevice);
-            cudaMemcpy(&simParams->dab_dev[i*simDomain->numPhases + j], &simParams->dab_host[i][j], sizeof(double),cudaMemcpyHostToDevice);
-
             for (int k = 0; k < 3; k++)
             {
                 for (int l = 0; l < 3; l++)
                 {
-                    //printf("%d\t%d\t%d\t%d\t%le\n", i, j, k, l, simParams->Rotation_matrix_host[i][j][k][l]);
-                    cudaMemcpy(&simParams->Rotation_matrix_dev[((i*simDomain->numPhases + j)*3 + k)*3 + l], &simParams->Rotation_matrix_host[i][j][k][l], sizeof(double),cudaMemcpyHostToDevice);
-                    cudaMemcpy(&simParams->Inv_Rotation_matrix_dev[((i*simDomain->numPhases + j)*3 + k)*3 + l], &simParams->Inv_Rotation_matrix_host[i][j][k][l], sizeof(double),cudaMemcpyHostToDevice);
+                    // Updating matrices on the device
+                    simParams->Rotation_matrix_dev[((i * simDomain->numPhases + j) * 3 + k) * 3 + l] = simParams->Rotation_matrix_host[i][j][k][l];
+                    simParams->Inv_Rotation_matrix_dev[((i * simDomain->numPhases + j) * 3 + k) * 3 + l] = simParams->Inv_Rotation_matrix_host[i][j][k][l];
                 }
             }
 
             for (int k = 0; k < simDomain->numPhases; k++)
             {
-                simParams->theta_ijk_host[i][j][k] *= (6.0*simParams->alpha)/simParams->epsilon;
-                cudaMemcpy(&simParams->theta_ijk_dev[(i*simDomain->numPhases + j)*simDomain->numPhases + k], &simParams->theta_ijk_host[i][j][k], sizeof(double), cudaMemcpyHostToDevice);
+                simParams->theta_ijk_host[i][j][k] *= (6.0 * simParams->alpha) / simParams->epsilon;
             }
 
-            for (int k = 0; k < simDomain->numComponents-1; k++)
+            for (int k = 0; k < simDomain->numComponents - 1; k++)
             {
-                cudaMemcpy(&simParams->ceq_dev[(i*simDomain->numPhases + j)*(simDomain->numComponents-1) + k], &simParams->ceq_host[i][j][k], sizeof(double), cudaMemcpyHostToDevice);
-                cudaMemcpy(&simParams->cfill_dev[(i*simDomain->numPhases + j)*(simDomain->numComponents-1) + k], &simParams->cfill_host[i][j][k], sizeof(double), cudaMemcpyHostToDevice);
-                cudaMemcpy(&simParams->cguess_dev[(i*simDomain->numPhases + j)*(simDomain->numComponents-1) + k], &simParams->cguess_host[i][j][k], sizeof(double), cudaMemcpyHostToDevice);
+                simParams->ceq_dev[(i * simDomain->numPhases + j) * (simDomain->numComponents - 1) + k] = simParams->ceq_host[i][j][k];
+                simParams->cfill_dev[(i * simDomain->numPhases + j) * (simDomain->numComponents - 1) + k] = simParams->cfill_host[i][j][k];
+                simParams->cguess_dev[(i * simDomain->numPhases + j) * (simDomain->numComponents - 1) + k] = simParams->cguess_host[i][j][k];
             }
         }
+    }
 
-        for (int j = 0; j < simDomain->numComponents-1; j++)
+    #pragma acc update device(simParams->theta_ijk_host[:simDomain->numPhases][:simDomain->numPhases][:simDomain->numPhases])
+
+    #pragma acc parallel loop present(simDomain, simParams)
+    for (int i = 0; i < simDomain->numPhases; i++)
+    {
+        simParams->F0_B_dev[i * (simDomain->numComponents - 1)] = simParams->F0_B_host[i][0];
+        for (int j = 0; j < simDomain->numComponents - 1; j++)
         {
-            cudaMemcpy(&simParams->F0_B_dev[i*(simDomain->numComponents-1) + j], &simParams->F0_B_host[i][j], sizeof(double), cudaMemcpyHostToDevice);
-
-            for (int k = 0; k < simDomain->numComponents-1; k++)
+            for (int k = 0; k < simDomain->numComponents - 1; k++)
             {
-                cudaMemcpy(&simParams->mobility_dev[(i*(simDomain->numComponents-1) + j)*(simDomain->numComponents-1) + k], &simParams->mobility_host[i][j][k], sizeof(double), cudaMemcpyHostToDevice);
-                cudaMemcpy(&simParams->diffusivity_dev[(i*(simDomain->numComponents-1) + j)*(simDomain->numComponents-1) + k], &simParams->diffusivity_host[i][j][k], sizeof(double), cudaMemcpyHostToDevice);
-                cudaMemcpy(&simParams->F0_A_dev[(i*(simDomain->numComponents-1) + j)*(simDomain->numComponents-1) + k], &simParams->F0_A_host[i][j][k], sizeof(double), cudaMemcpyHostToDevice);
+                simParams->mobility_dev[(i * (simDomain->numComponents - 1) + j) * (simDomain->numComponents - 1) + k] = simParams->mobility_host[i][j][k];
+                simParams->diffusivity_dev[(i * (simDomain->numComponents - 1) + j) * (simDomain->numComponents - 1) + k] = simParams->diffusivity_host[i][j][k];
+                simParams->F0_A_dev[(i * (simDomain->numComponents - 1) + j) * (simDomain->numComponents - 1) + k] = simParams->F0_A_host[i][j][k];
             }
         }
     }
@@ -302,6 +320,51 @@ void moveParamsToGPU(domainInfo *simDomain, controls *simControls, simParameters
  *  Kernel launch parameters
  *  Number of blocks, and size of each block is calculated here
  */
+ 
+ // NEED TO CHECK DIM3 Part I faced this part earlier
+ 
+ /*
+ 
+ void calcKernelParams(int gridSize[3], int blockSize[3], domainInfo simDomain, controls simControls, subdomainInfo *subdomain)
+{
+    if (simDomain.DIMENSION == 1)
+    {
+        blockSize[0] = 256;
+        blockSize[1] = 1;
+        blockSize[2] = 1;
+
+        gridSize[0] = (subdomain->sizeX + blockSize[0] - 1) / blockSize[0];
+        gridSize[1] = 1;
+        gridSize[2] = 1;
+    }
+    else if (simDomain.DIMENSION == 2)
+    {
+        blockSize[0] = 2;
+        blockSize[1] = 128;
+        blockSize[2] = 1;
+
+        gridSize[0] = (subdomain->sizeX + blockSize[0] - 1) / blockSize[0];
+        gridSize[1] = (subdomain->sizeY + blockSize[1] - 1) / blockSize[1];
+        gridSize[2] = 1;
+    }
+    else if (simDomain.DIMENSION == 3)
+    {
+        blockSize[0] = 4;
+        blockSize[1] = 8;
+        blockSize[2] = 8;
+
+        gridSize[0] = (subdomain->sizeX + blockSize[0] - 1) / blockSize[0];
+        gridSize[1] = (subdomain->sizeY + blockSize[1] - 1) / blockSize[1];
+        gridSize[2] = (subdomain->sizeZ + blockSize[2] - 1) / blockSize[2];
+    }
+
+    if (subdomain->rank == 0)
+        printf("\nGrid size: (%d, %d, %d)\nBlock size: (%d, %d, %d)\n\n", gridSize[0], gridSize[1], gridSize[2], blockSize[0], blockSize[1], blockSize[2]);
+}
+ 
+ */
+ 
+ 
 void calcKernelParams(dim3 *gridSize, dim3 *blockSize, domainInfo simDomain, controls simControls, subdomainInfo *subdomain)
 {
     if (simDomain.DIMENSION == 1)
@@ -310,10 +373,7 @@ void calcKernelParams(dim3 *gridSize, dim3 *blockSize, domainInfo simDomain, con
         blockSize->y = 1;
         blockSize->z = 1;
 
-        gridSize->x = ceil(subdomain->sizeX/blockSize->x);
-        if (subdomain->sizeX % blockSize->x)
-            gridSize->x += 1;
-
+        gridSize->x = (subdomain->sizeX + blockSize->x - 1) / blockSize->x;
         gridSize->y = 1;
         gridSize->z = 1;
 
@@ -324,14 +384,8 @@ void calcKernelParams(dim3 *gridSize, dim3 *blockSize, domainInfo simDomain, con
         blockSize->y = 128;
         blockSize->z = 1;
 
-        gridSize->x = ceil(subdomain->sizeX/blockSize->x);
-        if (subdomain->sizeX % blockSize->x)
-            gridSize->x += 1;
-
-        gridSize->y = ceil(subdomain->sizeY/blockSize->y);
-        if (subdomain->sizeY % blockSize->y)
-            gridSize->y += 1;
-
+        gridSize->x = (subdomain->sizeX + blockSize->x - 1) / blockSize->x;
+        gridSize->y = (subdomain->sizeY + blockSize->y - 1) / blockSize->y;
         gridSize->z = 1;
     }
     else if (simDomain.DIMENSION == 3)
@@ -340,19 +394,12 @@ void calcKernelParams(dim3 *gridSize, dim3 *blockSize, domainInfo simDomain, con
         blockSize->y = 8;
         blockSize->z = 8;
 
-        gridSize->x = ceil(subdomain->sizeX/blockSize->x);
-        if (subdomain->sizeX % blockSize->x)
-            gridSize->x += 1;
-
-        gridSize->y = ceil(subdomain->sizeY/blockSize->y);
-        if (subdomain->sizeY % blockSize->y)
-            gridSize->y += 1;
-
-        gridSize->z = ceil(subdomain->sizeZ/blockSize->z);
-        if (subdomain->sizeZ % blockSize->z)
-            gridSize->z += 1;
+        gridSize->x = (subdomain->sizeX + blockSize->x - 1) / blockSize->x;
+        gridSize->y = (subdomain->sizeY + blockSize->y - 1) / blockSize->y;
+        gridSize->z = (subdomain->sizeZ + blockSize->z - 1) / blockSize->z;
     }
 
     if (subdomain->rank == 0)
         printf("\nGrid size: (%ld, %ld, %ld)\nBlock size: (%ld, %ld, %ld)\n\n", (long)gridSize->x, (long)gridSize->y, (long)gridSize->z, (long)blockSize->x, (long)blockSize->y, (long)blockSize->z);
 }
+
