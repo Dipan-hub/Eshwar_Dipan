@@ -1,9 +1,14 @@
-#include "inputReader.h"
+#include "inputReader.hpp"
+#include <openacc.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 void readFill(fillParameters *simFill, char *argv[], int rank)
 {
     FILE *fr;
 
+    //if ((fr = fopen(argv[2], "rt")))
     if (fr = fopen(argv[2], "rt"))
     {
         if (!(rank))
@@ -13,6 +18,7 @@ void readFill(fillParameters *simFill, char *argv[], int rank)
     {
         if (!(rank))
             printf("\n File %s not found\n", argv[2]);
+        return;
     }
 
     long i;
@@ -270,3 +276,5 @@ void readFill(fillParameters *simFill, char *argv[], int rank)
 
     fclose(fr);
 }
+
+
