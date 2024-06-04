@@ -7,20 +7,17 @@
 
 #if ENABLE_CUFFTMP == 1
 
-#include <cufftMp.h>
 #include <cstdio>
-//#include "box_iterator.hpp"
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
 
-#define CUDA_CHECK(ans) { gpu_checkAssert((ans), __FILE__, __LINE__); }
-void gpu_checkAssert(cudaError_t code, const char *file, int line, bool abort=true);
+// Define a generic error check macro
+#define CHECK_ERROR(ans) { check_error((ans), __FILE__, __LINE__); }
+void check_error(int code, const char *file, int line, bool abort=true);
 
-#define CUFFT_CHECK(ans) { cufft_check((ans), __FILE__, __LINE__); }
-void cufft_check(int code, const char *file, int line, bool abort=true);
-
-// template<typename T>
-// double compute_error(const T& ref, const T& test, cufftBox3d box);
-
+// Function to assess error
 int assess_error(double error);
 
-#endif //ENABLE_CUFFTMP
-#endif //ifndef ERROR_CHECKS_HPP_
+#endif // ENABLE_CUFFTMP
+#endif // ERROR_CHECKS_HPP_
