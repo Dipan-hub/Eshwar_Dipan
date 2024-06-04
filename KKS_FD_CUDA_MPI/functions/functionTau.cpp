@@ -1,16 +1,16 @@
-#include "functionTau.cuh"
+#include "functionTau.hpp"
+#include <accelmath.h> // OpenACC math library
 
 /*
  *  Weight phase-field mobility using local phase-field values
  *  Replicated from GP solver
  */
-#ifdef __CUDA_ARCH__
-extern __device__
 double FunctionTau(double **phi, double *relaxCoeff, long idx, long NUMPHASES)
 {
     double sum = 0.0, sum1 = 0.0;
     long a, b;
 
+    #pragma acc parallel loop reduction(+:sum,sum1) present(phi, relaxCoeff)
     for (a = 0; a < NUMPHASES; a++)
     {
         for (b = 0; b < NUMPHASES; b++)
@@ -32,7 +32,6 @@ double FunctionTau(double **phi, double *relaxCoeff, long idx, long NUMPHASES)
         return relaxCoeff[1];
     }
 }
-#endif
 
 void calculateTau(domainInfo *simDomain, controls *simControls, simParameters *simParams)
 {
@@ -62,7 +61,6 @@ void calculateTau(domainInfo *simDomain, controls *simControls, simParameters *s
         // Mobility matrix
         for (long i = 0; i < simDomain->numPhases; i++)
         {
-            // int P[simDomain->numComponents];
             double **inverted = MallocM(simDomain->numComponents-1, simDomain->numComponents-1);
             double **dmudc_local = MallocM(simDomain->numComponents-1, simDomain->numComponents-1);
 
@@ -73,9 +71,6 @@ void calculateTau(domainInfo *simDomain, controls *simControls, simParameters *s
                     dmudc_local[j][k] = dmudc[i][j][k];
                 }
             }
-
-            // LUPDecompose(dmudc_local, simDomain->numComponents-1, Tol, P);
-            // LUPInvert(dmudc_local, P, simDomain->numComponents-1, inverted);
 
             matinvnew(dmudc_local, inverted, simDomain->numComponents-1);
 
@@ -88,7 +83,6 @@ void calculateTau(domainInfo *simDomain, controls *simControls, simParameters *s
         // Relaxation Coefficients
         double **mobilityInv = MallocM(simDomain->numComponents-1, simDomain->numComponents-1);
         double deltac[simDomain->numComponents-1], deltamu[simDomain->numComponents-1];
-        // int P[simDomain->numComponents];
 
         double **inverted = MallocM(simDomain->numComponents-1, simDomain->numComponents-1);
 
@@ -101,8 +95,6 @@ void calculateTau(domainInfo *simDomain, controls *simControls, simParameters *s
             }
         }
 
-        // LUPDecompose(inverted, simDomain->numComponents-1, Tol, P);
-        // LUPInvert(inverted, P, simDomain->numComponents-1, mobilityInv);
         matinvnew(inverted, mobilityInv, simDomain->numComponents-1);
 
         for (long a = 0; a < simDomain->numPhases-1; a++)
@@ -125,7 +117,6 @@ void calculateTau(domainInfo *simDomain, controls *simControls, simParameters *s
             {
                 sum += deltac[i]*deltamu[i];
             }
-
 
             simParams->Tau_host[a][simDomain->numPhases-1] = (3.0*0.783333*simParams->kappaPhi_host[a][simDomain->numPhases-1]*sum)/(simParams->theta_ij_host[a][simDomain->numPhases-1]*simParams->molarVolume);
             simParams->Tau_host[simDomain->numPhases-1][a] = simParams->Tau_host[a][simDomain->numPhases-1];
