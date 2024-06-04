@@ -3,12 +3,14 @@
 void assign_buffer_points_conditions(long j, int BOUNDARY_LEFT, int BOUNDARY_RIGHT, int BOUNDARY_FRONT, int BOUNDARY_BACK, int BOUNDARY_TOP, int BOUNDARY_BOTTOM,
                                      domainInfo *simDomain, controls *simControls, simParameters *simParams)
 {
-    simControls->boundary[0][j].type = BOUNDARY_LEFT;
-    simControls->boundary[1][j].type = BOUNDARY_RIGHT;
-    simControls->boundary[2][j].type = BOUNDARY_FRONT;
-    simControls->boundary[3][j].type = BOUNDARY_BACK;
-    simControls->boundary[4][j].type = BOUNDARY_TOP;
-    simControls->boundary[5][j].type = BOUNDARY_BOTTOM;
+    #pragma acc parallel
+    {
+        simControls->boundary[0][j].type = BOUNDARY_LEFT;
+        simControls->boundary[1][j].type = BOUNDARY_RIGHT;
+        simControls->boundary[2][j].type = BOUNDARY_FRONT;
+        simControls->boundary[3][j].type = BOUNDARY_BACK;
+        simControls->boundary[4][j].type = BOUNDARY_TOP;
+        simControls->boundary[5][j].type = BOUNDARY_BOTTOM;
 
     if ((simControls->boundary[0][j].type == 3) || (simControls->boundary[1][j].type == 3) ) {
         BOUNDARY_LEFT    = 3;
@@ -34,15 +36,13 @@ void assign_buffer_points_conditions(long j, int BOUNDARY_LEFT, int BOUNDARY_RIG
         simControls->boundary[5][j].type = 0;
     }
 
-    long i;
-
-    for (i = 0; i < 6; i++)
-    {
-        if ((simControls->boundary[0][j].type == 2) || (simControls->boundary[0][j].type == 0))
-        {
+    #pragma acc parallel loop
+    for (long i = 0; i < 6; i++) {
+        if ((simControls->boundary[0][j].type == 2) || (simControls->boundary[0][j].type == 0)) {
             fprintf(stdout, "DIRICHLET and FREE boundary conditions have not yet been implemented. Please wait for next release. Will default to PERIODIC\n");
         }
     }
+}
 }
 
 
@@ -76,17 +76,24 @@ void initialize_boundary_conditions(char *tmpstr, domainInfo *simDomain, control
     int BOUNDARY_TOP    = atoi(tmp[5]);
     int BOUNDARY_BOTTOM = atoi(tmp[6]);
 
-    if (strcmp(tmp[0], "phi") == 0) {
-        assign_buffer_points_conditions(0, BOUNDARY_LEFT, BOUNDARY_RIGHT, BOUNDARY_FRONT, BOUNDARY_BACK, BOUNDARY_TOP, BOUNDARY_BOTTOM, simDomain, simControls, simParams);
-    }
-    if (strcmp(tmp[0], "mu") == 0) {
-        assign_buffer_points_conditions(1, BOUNDARY_LEFT, BOUNDARY_RIGHT, BOUNDARY_FRONT, BOUNDARY_BACK, BOUNDARY_TOP, BOUNDARY_BOTTOM, simDomain, simControls, simParams);
-    }
-    if (strcmp(tmp[0], "c") == 0) {
-        assign_buffer_points_conditions(2, BOUNDARY_LEFT, BOUNDARY_RIGHT, BOUNDARY_FRONT, BOUNDARY_BACK, BOUNDARY_TOP, BOUNDARY_BOTTOM, simDomain, simControls, simParams);
-    }
-    if (strcmp(tmp[0], "T") == 0) {
-        assign_buffer_points_conditions(3, BOUNDARY_LEFT, BOUNDARY_RIGHT, BOUNDARY_FRONT, BOUNDARY_BACK, BOUNDARY_TOP, BOUNDARY_BOTTOM, simDomain, simControls, simParams);
+    #pragma acc parallel
+    {
+        if (strcmp(tmp[0], "phi") == 0)
+        {
+            assign_buffer_points_conditions(0, BOUNDARY_LEFT, BOUNDARY_RIGHT, BOUNDARY_FRONT, BOUNDARY_BACK, BOUNDARY_TOP, BOUNDARY_BOTTOM, simDomain, simControls, simParams);
+        }
+        if (strcmp(tmp[0], "mu") == 0)
+        {
+            assign_buffer_points_conditions(1, BOUNDARY_LEFT, BOUNDARY_RIGHT, BOUNDARY_FRONT, BOUNDARY_BACK, BOUNDARY_TOP, BOUNDARY_BOTTOM, simDomain, simControls, simParams);
+        }
+        if (strcmp(tmp[0], "c") == 0)
+        {
+            assign_buffer_points_conditions(2, BOUNDARY_LEFT, BOUNDARY_RIGHT, BOUNDARY_FRONT, BOUNDARY_BACK, BOUNDARY_TOP, BOUNDARY_BOTTOM, simDomain, simControls, simParams);
+        }
+        if (strcmp(tmp[0], "T") == 0)
+        {
+            assign_buffer_points_conditions(3, BOUNDARY_LEFT, BOUNDARY_RIGHT, BOUNDARY_FRONT, BOUNDARY_BACK, BOUNDARY_TOP, BOUNDARY_BOTTOM, simDomain, simControls, simParams);
+        }
     }
 
     for (i = 0; i < len; ++i) {
@@ -108,12 +115,14 @@ void PRINT_BOUNDARY_CONDITIONS(FILE *fp, domainInfo *simDomain, controls *simCon
 
     char Scalars[4][20] = {"phi", "mu", "c", "T"};
 
-    for (j = 0; j < 3; j++) {
-        sprintf(key[0], "BOUNDARY_LEFT[%s]",   Scalars[j]);
-        sprintf(key[1], "BOUNDARY_RIGHT[%s]",  Scalars[j]);
-        sprintf(key[2], "BOUNDARY_FRONT[%s]",  Scalars[j]);
-        sprintf(key[3], "BOUNDARY_BACK[%s]",   Scalars[j]);
-        sprintf(key[4], "BOUNDARY_TOP[%s]",    Scalars[j]);
+    #pragma acc parallel loop collapse(2)
+    for (j = 0; j < 3; j++)
+    {
+        sprintf(key[0], "BOUNDARY_LEFT[%s]", Scalars[j]);
+        sprintf(key[1], "BOUNDARY_RIGHT[%s]", Scalars[j]);
+        sprintf(key[2], "BOUNDARY_FRONT[%s]", Scalars[j]);
+        sprintf(key[3], "BOUNDARY_BACK[%s]", Scalars[j]);
+        sprintf(key[4], "BOUNDARY_TOP[%s]", Scalars[j]);
         sprintf(key[5], "BOUNDARY_BOTTOM[%s]", Scalars[j]);
 
         var[0] = simControls->boundary[0][j].type;
@@ -152,11 +161,13 @@ void PRINT_BOUNDARY_CONDITIONS(FILE *fp, domainInfo *simDomain, controls *simCon
     key = NULL;
 }
 
+
+
 void read_boundary_conditions(domainInfo *simDomain, controls *simControls,
                               simParameters *simParams, int rank, char *argv[])
 {
     FILE *fr, *fp;
-    if (fr = fopen(argv[1], "rt"))
+    if ((fr = fopen(argv[1], "rt")))
     {
         if (!(rank))
             printf("\nReading boundary conditions from %s\n", argv[1]);
@@ -165,6 +176,7 @@ void read_boundary_conditions(domainInfo *simDomain, controls *simControls,
     {
         if (!(rank))
             printf("\nFile %s not found\n", argv[1]);
+        return;
     }
 
     char tempbuff[1000];
@@ -200,3 +212,4 @@ void read_boundary_conditions(domainInfo *simDomain, controls *simControls,
 
     fclose(fp);
 }
+
