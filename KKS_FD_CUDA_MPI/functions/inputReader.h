@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-#include "structures.h"
+#include "structures.hpp"
 #include "utilityFunctions.h"
 
 /*
