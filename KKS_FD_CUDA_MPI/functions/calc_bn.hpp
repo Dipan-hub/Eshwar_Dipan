@@ -7,7 +7,7 @@
 
 #if ENABLE_CUFFTMP == 1
 
-#include "structures.h"
+#include "structures.hpp"
 #include <math.h>
 #include <stdio.h>
 
