@@ -1,5 +1,5 @@
-#ifndef FILLING_H_
-#define FILLING_H_
+#ifndef FILLING_HPP_
+#define FILLING_HPP_
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -7,7 +7,7 @@
 #include <mpi.h>
 #include <math.h>
 
-#include "structures.h"
+#include "structures.hpp"
 
 /*
  * Fill the domain using the input read by readFill()
