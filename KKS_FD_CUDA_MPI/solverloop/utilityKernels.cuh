@@ -1,31 +1,18 @@
-#ifndef UTILITYKERNELS_CUH_
-#define UTILITYKERNELS_CUH_
+#ifndef UTILITYKERNELS_HPP_
+#define UTILITYKERNELS_HPP_
 
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include "helper_string.h"
-#include "helper_cuda.h"
+#include <cmath>
+#include "Thermo.h"
+#include "structures.hpp"
 
-#include "Thermo.cuh"
-#include "structures.h"
+void computeChange(double *A, double *B, long DIMENSION, long sizeX, long sizeY, long sizeZ);
 
-__global__
-void __computeChange__(double *A, double *B, long DIMENSION,
-                   long sizeX, long sizeY, long sizeZ, long padding);
+void resetArray(double **arr, long numArr, long sizeX, long sizeY, long sizeZ);
 
-__global__
-void __resetArray__(double **arr, long numArr,
-                    long sizeX, long sizeY, long sizeZ);
+void printStats(double **phi, double **comp, double **phiNew, double **compNew, 
+                double *maxerr, double *maxVal, double *minVal, 
+                domainInfo simDomain, subdomainInfo subdomain);
 
-void printStats(double **phi, double **comp,
-                double **phiNew, double **compNew,
-                double *maxerr, double *maxVal, double *minVal,
-                domainInfo simDomain, subdomainInfo subdomain,
-                dim3 gridSize, dim3 blockSize);
+void resetArray(double **arr, long numArr, long DIMENSION, long sizeX, long sizeY, long sizeZ);
 
-void resetArray(double **arr, long numArr,
-                long DIMENSION,
-                long sizeX, long sizeY, long sizeZ,
-                dim3 gridSize, dim3 blockSize);
-
-#endif
+#endif // UTILITYKERNELS_H_
