@@ -2,7 +2,7 @@
 #define FUNCTIONA_02_HPP_
 
 #include <stdio.h>
-#include <cmath>
+
 #include "structures.hpp"
 #include "anisotropy_01.hpp"
 
@@ -19,7 +19,7 @@
 #define back   6
 
 /*
- * double calcAnisotropy_02
+ * __device__ double calcAnisotropy_02
  *
  * Calculate anisotropy
  *
@@ -37,7 +37,7 @@
  *              10. double DELTA_Z
  *
  */
-
+extern
 double calcAnisotropy_02(double phi[MAX_NUM_PHASES][3][3][3],
                          double *dab, double *eps_ab,
                          double *Rotation_matrix, double *Inv_rotation_matrix,
