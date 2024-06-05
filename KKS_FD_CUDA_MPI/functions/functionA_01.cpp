@@ -63,7 +63,10 @@ double calcAnisotropy_01(double phi[MAX_NUM_PHASES*27],
     /*
      *  Find phiMid and gradPhiMid for the phase being solved (alpha)
      */
-    phiMid[0][centre] = phi(phase, 1, 1, 1);
+
+    #pragma acc data present( phi[MAX_NUM_PHASES*27],dab[:NUMPHASES*NUMPHASES], eps_ab[:NUMPHASES * NUMPHASES],[:NUMPHASES*NUMPHASES*3*3], Inv_rotation_matrix[:NUMPHASES*NUMPHASES*3*3],phase,  NUMPHASES,  DIMENSION,DELTA_X,  DELTA_Y,  DELTA_Z) create(i , ip1,gradPhiMid[:2*7*3],phiMid[:2*7],qMid[:7*3],dqdphi[:3],Rotated_vector[:3] , ac[:7],qab2[:7],dadq[:7*3],Rotated_dadq[:7*3])
+    {
+        phiMid[0][centre] = phi(phase, 1, 1, 1);
 
     phiMid[0][left]   = (phi(phase, 0, 1, 1) + phi(phase, 1, 1, 1))/2.0;
     phiMid[0][right]  = (phi(phase, 2, 1, 1) + phi(phase, 1, 1, 1))/2.0;
@@ -168,87 +171,87 @@ double calcAnisotropy_01(double phi[MAX_NUM_PHASES*27],
 
     if(DIMENSION == 1)
     {
-    	 #pragma acc parallel loop
-    	 for (ip1 = 0; ip1 < NUMPHASES; ip1++)
-    	 {
-    	 	 if (ip1 == phase)
-            	continue;
+         #pragma acc parallel loop
+         for (ip1 = 0; ip1 < NUMPHASES; ip1++)
+         {
+             if (ip1 == phase)
+                continue;
             phiMid[1][centre] = phi(ip1, 1, 1, 1);
 
-        	phiMid[1][left]   = (phi(ip1, 1, 1, 1) + phi(ip1, 0, 1, 1))/2.0;
-        	phiMid[1][right]  = (phi(ip1, 2, 1, 1) + phi(ip1, 1, 1, 1))/2.0;
+            phiMid[1][left]   = (phi(ip1, 1, 1, 1) + phi(ip1, 0, 1, 1))/2.0;
+            phiMid[1][right]  = (phi(ip1, 2, 1, 1) + phi(ip1, 1, 1, 1))/2.0;
 
-        	gradPhiMid[1][centre][ix] = (phi(ip1, 2, 1, 1) - phi(ip1, 0, 1, 1))/(2.0*DELTA_X);
-        	gradPhiMid[1][left][ix]   = (phi(ip1, 1, 1, 1) - phi(ip1, 0, 1, 1))/(DELTA_X);
-        	gradPhiMid[1][right][ix]  = (phi(ip1, 2, 1, 1) - phi(ip1, 1, 1, 1))/(DELTA_X);
-        	
-        	#pragma acc parallel loop
-        	for (i = 0; i < maxPos; i++)
-        	{
-        		qMid[i][ix] = phiMid[0][i]*gradPhiMid[1][i][ix] - phiMid[1][i]*gradPhiMid[0][i][ix];
-        		multiply(Rotation_matrix, qMid[i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+            gradPhiMid[1][centre][ix] = (phi(ip1, 2, 1, 1) - phi(ip1, 0, 1, 1))/(2.0*DELTA_X);
+            gradPhiMid[1][left][ix]   = (phi(ip1, 1, 1, 1) - phi(ip1, 0, 1, 1))/(DELTA_X);
+            gradPhiMid[1][right][ix]  = (phi(ip1, 2, 1, 1) - phi(ip1, 1, 1, 1))/(DELTA_X);
+            
+            #pragma acc parallel loop
+            for (i = 0; i < maxPos; i++)
+            {
+                qMid[i][ix] = phiMid[0][i]*gradPhiMid[1][i][ix] - phiMid[1][i]*gradPhiMid[0][i][ix];
+                multiply(Rotation_matrix, qMid[i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-            	qMid[i][ix] = Rotated_vector[ix];
+                qMid[i][ix] = Rotated_vector[ix];
             }
 
               for (i = 0; i < maxPos; i++)
-        	{
-            	ac[i] = anisotropy_01_function_ac(qMid[i], phase, ip1, dab, NUMPHASES);
-            	anisotropy_01_dAdq(qMid[i], dadq[i], phase, ip1, dab, NUMPHASES);
-            	multiply(Inv_rotation_matrix, dadq[i], Rotated_dadq[i], phase, ip1, NUMPHASES, DIMENSION);
-        	}
+            {
+                ac[i] = anisotropy_01_function_ac(qMid[i], phase, ip1, dab, NUMPHASES);
+                anisotropy_01_dAdq(qMid[i], dadq[i], phase, ip1, dab, NUMPHASES);
+                multiply(Inv_rotation_matrix, dadq[i], Rotated_dadq[i], phase, ip1, NUMPHASES, DIMENSION);
+            }
 
-        	dqdphi[ix] = gradPhiMid[1][centre][ix];
-        	multiply(Rotation_matrix, dqdphi, Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+            dqdphi[ix] = gradPhiMid[1][centre][ix];
+            multiply(Rotation_matrix, dqdphi, Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-       	 	dqdphi[ix] = Rotated_vector[ix];
+            dqdphi[ix] = Rotated_vector[ix];
 
-       	 	#pragma acc parallel loop
-       	 	for (i = 0; i < maxPos; i++)
-       	 	{
-            	multiply(Rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+            #pragma acc parallel loop
+            for (i = 0; i < maxPos; i++)
+            {
+                multiply(Rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-            	gradPhiMid[1][i][ix] = Rotated_vector[ix];
-            	multiply(Rotation_matrix, gradPhiMid[0][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+                gradPhiMid[1][i][ix] = Rotated_vector[ix];
+                multiply(Rotation_matrix, gradPhiMid[0][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-            	qab2[i] = (Rotated_vector[ix]*gradPhiMid[1][i][ix] + Rotated_vector[iy]*gradPhiMid[1][i][iy] + Rotated_vector[iz]*gradPhiMid[1][i][iz]);
+                qab2[i] = (Rotated_vector[ix]*gradPhiMid[1][i][ix] + Rotated_vector[iy]*gradPhiMid[1][i][iy] + Rotated_vector[iz]*gradPhiMid[1][i][iz]);
 
-            	multiply(Inv_rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+                multiply(Inv_rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-            	gradPhiMid[1][i][ix] = Rotated_vector[ix];
+                gradPhiMid[1][i][ix] = Rotated_vector[ix];
             }
             sum1 = (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[right]*Rotated_dadq[right][ix]*-phiMid[1][right]*qab2[right])/DELTA_X;
-        	sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[left]*Rotated_dadq[left][ix]*-phiMid[1][left]*qab2[left])/DELTA_X;
+            sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[left]*Rotated_dadq[left][ix]*-phiMid[1][left]*qab2[left])/DELTA_X;
 
-        	sum2 = eps_ab[phase*NUMPHASES + ip1]*ac[right]*ac[right]*gradPhiMid[1][right][ix]/DELTA_X;
-        	sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[left]*ac[left]*gradPhiMid[1][left][ix]/DELTA_X;
+            sum2 = eps_ab[phase*NUMPHASES + ip1]*ac[right]*ac[right]*gradPhiMid[1][right][ix]/DELTA_X;
+            sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[left]*ac[left]*gradPhiMid[1][left][ix]/DELTA_X;
 
-        	sum3 = -2.0*eps_ab[phase*NUMPHASES + ip1]*ac[centre]
+            sum3 = -2.0*eps_ab[phase*NUMPHASES + ip1]*ac[centre]
             *(dadq[centre][ix]*dqdphi[ix])
             *(qab2[centre]);
-    	 }
-    	 
+         }
+         
     }
 
 
     else if(DIMENSION == 2)
     {
-    	 #pragma acc parallel loop
-    	 for (ip1 = 0; ip1 < NUMPHASES; ip1++)
-    	{
-        	if (ip1 == phase)
+         #pragma acc parallel loop
+         for (ip1 = 0; ip1 < NUMPHASES; ip1++)
+        {
+            if (ip1 == phase)
             continue;
-        	
-        	phiMid[1][centre] = phi(ip1, 1, 1, 1);
-        	phiMid[1][left]   = (phi(ip1, 1, 1, 1) + phi(ip1, 0, 1, 1))/2.0;
-        	phiMid[1][right]  = (phi(ip1, 2, 1, 1) + phi(ip1, 1, 1, 1))/2.0;
-        	phiMid[1][top]    = (phi(ip1, 1, 0, 1) + phi(ip1, 1, 1, 1))/2.0;
+            
+            phiMid[1][centre] = phi(ip1, 1, 1, 1);
+            phiMid[1][left]   = (phi(ip1, 1, 1, 1) + phi(ip1, 0, 1, 1))/2.0;
+            phiMid[1][right]  = (phi(ip1, 2, 1, 1) + phi(ip1, 1, 1, 1))/2.0;
+            phiMid[1][top]    = (phi(ip1, 1, 0, 1) + phi(ip1, 1, 1, 1))/2.0;
             phiMid[1][bottom] = (phi(ip1, 1, 2, 1) + phi(ip1, 1, 1, 1))/2.0;
 
             gradPhiMid[1][centre][ix] = (phi(ip1, 2, 1, 1) - phi(ip1, 0, 1, 1))/(2.0*DELTA_X);
-        	gradPhiMid[1][left][ix]   = (phi(ip1, 1, 1, 1) - phi(ip1, 0, 1, 1))/(DELTA_X);
-        	gradPhiMid[1][right][ix]  = (phi(ip1, 2, 1, 1) - phi(ip1, 1, 1, 1))/(DELTA_X);
-        	gradPhiMid[1][top][ix]    = ((phi(ip1, 2, 0, 1) - phi(ip1, 0, 0, 1))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
+            gradPhiMid[1][left][ix]   = (phi(ip1, 1, 1, 1) - phi(ip1, 0, 1, 1))/(DELTA_X);
+            gradPhiMid[1][right][ix]  = (phi(ip1, 2, 1, 1) - phi(ip1, 1, 1, 1))/(DELTA_X);
+            gradPhiMid[1][top][ix]    = ((phi(ip1, 2, 0, 1) - phi(ip1, 0, 0, 1))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
             gradPhiMid[1][bottom][ix] = ((phi(ip1, 2, 2, 1) - phi(ip1, 0, 2, 1))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
 
             gradPhiMid[1][centre][iy] = (phi(ip1, 1, 2, 1) - phi(ip1, 1, 0, 1))/(2.0*DELTA_Y);
@@ -260,62 +263,62 @@ double calcAnisotropy_01(double phi[MAX_NUM_PHASES*27],
             #pragma acc parallel loop
             for (i = 0; i < maxPos; i++)
             {
-            	qMid[i][ix] = phiMid[0][i]*gradPhiMid[1][i][ix] - phiMid[1][i]*gradPhiMid[0][i][ix];
-            	qMid[i][iy] = phiMid[0][i]*gradPhiMid[1][i][iy] - phiMid[1][i]*gradPhiMid[0][i][iy];
-            	multiply(Rotation_matrix, qMid[i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+                qMid[i][ix] = phiMid[0][i]*gradPhiMid[1][i][ix] - phiMid[1][i]*gradPhiMid[0][i][ix];
+                qMid[i][iy] = phiMid[0][i]*gradPhiMid[1][i][iy] - phiMid[1][i]*gradPhiMid[0][i][iy];
+                multiply(Rotation_matrix, qMid[i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-            	qMid[i][ix] = Rotated_vector[ix];
-            	qMid[i][iy] = Rotated_vector[iy];
+                qMid[i][ix] = Rotated_vector[ix];
+                qMid[i][iy] = Rotated_vector[iy];
             }
 
-			#pragma acc parallel loop
+            #pragma acc parallel loop
             for (i = 0; i < maxPos; i++)
-        	{
-	            ac[i] = anisotropy_01_function_ac(qMid[i], phase, ip1, dab, NUMPHASES);
-	            anisotropy_01_dAdq(qMid[i], dadq[i], phase, ip1, dab, NUMPHASES);
-	            multiply(Inv_rotation_matrix, dadq[i], Rotated_dadq[i], phase, ip1, NUMPHASES, DIMENSION);
-        	}
+            {
+                ac[i] = anisotropy_01_function_ac(qMid[i], phase, ip1, dab, NUMPHASES);
+                anisotropy_01_dAdq(qMid[i], dadq[i], phase, ip1, dab, NUMPHASES);
+                multiply(Inv_rotation_matrix, dadq[i], Rotated_dadq[i], phase, ip1, NUMPHASES, DIMENSION);
+            }
 
-        	dqdphi[ix] = gradPhiMid[1][centre][ix];
-        	dqdphi[iy] = gradPhiMid[1][centre][iy];
+            dqdphi[ix] = gradPhiMid[1][centre][ix];
+            dqdphi[iy] = gradPhiMid[1][centre][iy];
 
-        	multiply(Rotation_matrix, dqdphi, Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+            multiply(Rotation_matrix, dqdphi, Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-        	dqdphi[ix] = Rotated_vector[ix];
+            dqdphi[ix] = Rotated_vector[ix];
             dqdphi[iy] = Rotated_vector[iy];
             #pragma acc parallel loop
             for (i = 0; i < maxPos; i++)
-        	{
-        		multiply(Rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
-            	gradPhiMid[1][i][ix] = Rotated_vector[ix];
-            	gradPhiMid[1][i][iy] = Rotated_vector[iy];
-            	multiply(Rotation_matrix, gradPhiMid[0][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+            {
+                multiply(Rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+                gradPhiMid[1][i][ix] = Rotated_vector[ix];
+                gradPhiMid[1][i][iy] = Rotated_vector[iy];
+                multiply(Rotation_matrix, gradPhiMid[0][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-            	qab2[i] = (Rotated_vector[ix]*gradPhiMid[1][i][ix] + Rotated_vector[iy]*gradPhiMid[1][i][iy] + Rotated_vector[iz]*gradPhiMid[1][i][iz]);
+                qab2[i] = (Rotated_vector[ix]*gradPhiMid[1][i][ix] + Rotated_vector[iy]*gradPhiMid[1][i][iy] + Rotated_vector[iz]*gradPhiMid[1][i][iz]);
 
-            	multiply(Inv_rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
-            	gradPhiMid[1][i][ix] = Rotated_vector[ix];
-            	gradPhiMid[1][i][iy] = Rotated_vector[iy];
+                multiply(Inv_rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+                gradPhiMid[1][i][ix] = Rotated_vector[ix];
+                gradPhiMid[1][i][iy] = Rotated_vector[iy];
             }
 
 
-	        /*
-	         * sum1 ->  eps_ab * div(2ac(q) * dacdq * dqdgradphi_a * gradphi_a * gradphi_b)
-	         *          where dqdgradphi_a = -phi_b
-	         *
-	         */
+            /*
+             * sum1 ->  eps_ab * div(2ac(q) * dacdq * dqdgradphi_a * gradphi_a * gradphi_b)
+             *          where dqdgradphi_a = -phi_b
+             *
+             */
 
-	        /*
-	         * (i+1/2, j, k) - (i-1/2, j, k)
-	         */
-	        sum1 = (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[right]*Rotated_dadq[right][ix]*-phiMid[1][right]*qab2[right])/DELTA_X;
-	        sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[left]*Rotated_dadq[left][ix]*-phiMid[1][left]*qab2[left])/DELTA_X;
-	        sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*Rotated_dadq[bottom][iy]*-phiMid[1][bottom]*qab2[bottom])/DELTA_Y;
+            /*
+             * (i+1/2, j, k) - (i-1/2, j, k)
+             */
+            sum1 = (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[right]*Rotated_dadq[right][ix]*-phiMid[1][right]*qab2[right])/DELTA_X;
+            sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[left]*Rotated_dadq[left][ix]*-phiMid[1][left]*qab2[left])/DELTA_X;
+            sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*Rotated_dadq[bottom][iy]*-phiMid[1][bottom]*qab2[bottom])/DELTA_Y;
             sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[top]*Rotated_dadq[top][iy]*-phiMid[1][top]*qab2[top])/DELTA_Y;
             
             sum2 = eps_ab[phase*NUMPHASES + ip1]*ac[right]*ac[right]*gradPhiMid[1][right][ix]/DELTA_X;
-        	sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[left]*ac[left]*gradPhiMid[1][left][ix]/DELTA_X;
-        	sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*ac[bottom]*gradPhiMid[1][bottom][iy]/DELTA_Y;
+            sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[left]*ac[left]*gradPhiMid[1][left][ix]/DELTA_X;
+            sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*ac[bottom]*gradPhiMid[1][bottom][iy]/DELTA_Y;
             sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[top]*ac[top]*gradPhiMid[1][top][iy]/DELTA_Y;
 
             sum3 = -2.0*eps_ab[phase*NUMPHASES + ip1]*ac[centre]
@@ -327,72 +330,72 @@ double calcAnisotropy_01(double phi[MAX_NUM_PHASES*27],
 
     else if(DIMENSION == 3)
     {
-    	#pragma acc parallel loop
-    	for (ip1 = 0; ip1 < NUMPHASES; ip1++)
-    	{
-        	if (ip1 == phase)
-            	continue;
-    	
+        #pragma acc parallel loop
+        for (ip1 = 0; ip1 < NUMPHASES; ip1++)
+        {
+            if (ip1 == phase)
+                continue;
+        
 
-	    	phiMid[1][centre] = phi(ip1, 1, 1, 1);
+            phiMid[1][centre] = phi(ip1, 1, 1, 1);
 
-	        phiMid[1][left]   = (phi(ip1, 1, 1, 1) + phi(ip1, 0, 1, 1))/2.0;
-	        phiMid[1][right]  = (phi(ip1, 2, 1, 1) + phi(ip1, 1, 1, 1))/2.0;
+            phiMid[1][left]   = (phi(ip1, 1, 1, 1) + phi(ip1, 0, 1, 1))/2.0;
+            phiMid[1][right]  = (phi(ip1, 2, 1, 1) + phi(ip1, 1, 1, 1))/2.0;
 
-	        phiMid[1][top]    = (phi(ip1, 1, 0, 1) + phi(ip1, 1, 1, 1))/2.0;
-	        phiMid[1][bottom] = (phi(ip1, 1, 2, 1) + phi(ip1, 1, 1, 1))/2.0;
+            phiMid[1][top]    = (phi(ip1, 1, 0, 1) + phi(ip1, 1, 1, 1))/2.0;
+            phiMid[1][bottom] = (phi(ip1, 1, 2, 1) + phi(ip1, 1, 1, 1))/2.0;
 
-	        phiMid[1][front]  = (phi(ip1, 1, 1, 0) + phi(ip1, 1, 1, 1))/2.0;
-	        phiMid[1][back]   = (phi(ip1, 1, 1, 2) + phi(ip1, 1, 1, 1))/2.0;
+            phiMid[1][front]  = (phi(ip1, 1, 1, 0) + phi(ip1, 1, 1, 1))/2.0;
+            phiMid[1][back]   = (phi(ip1, 1, 1, 2) + phi(ip1, 1, 1, 1))/2.0;
 
-	        gradPhiMid[1][centre][ix] = (phi(ip1, 2, 1, 1) - phi(ip1, 0, 1, 1))/(2.0*DELTA_X);
-	        gradPhiMid[1][left][ix]   = (phi(ip1, 1, 1, 1) - phi(ip1, 0, 1, 1))/(DELTA_X);
-	        gradPhiMid[1][right][ix]  = (phi(ip1, 2, 1, 1) - phi(ip1, 1, 1, 1))/(DELTA_X);
+            gradPhiMid[1][centre][ix] = (phi(ip1, 2, 1, 1) - phi(ip1, 0, 1, 1))/(2.0*DELTA_X);
+            gradPhiMid[1][left][ix]   = (phi(ip1, 1, 1, 1) - phi(ip1, 0, 1, 1))/(DELTA_X);
+            gradPhiMid[1][right][ix]  = (phi(ip1, 2, 1, 1) - phi(ip1, 1, 1, 1))/(DELTA_X);
 
-	        gradPhiMid[1][top][ix]    = ((phi(ip1, 2, 0, 1) - phi(ip1, 0, 0, 1))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
-	        gradPhiMid[1][bottom][ix] = ((phi(ip1, 2, 2, 1) - phi(ip1, 0, 2, 1))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
-	        gradPhiMid[1][front][ix]  = ((phi(ip1, 2, 1, 0) - phi(ip1, 0, 1, 0))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
-	        gradPhiMid[1][back][ix]   = ((phi(ip1, 2, 1, 2) - phi(ip1, 0, 1, 2))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
+            gradPhiMid[1][top][ix]    = ((phi(ip1, 2, 0, 1) - phi(ip1, 0, 0, 1))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
+            gradPhiMid[1][bottom][ix] = ((phi(ip1, 2, 2, 1) - phi(ip1, 0, 2, 1))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
+            gradPhiMid[1][front][ix]  = ((phi(ip1, 2, 1, 0) - phi(ip1, 0, 1, 0))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
+            gradPhiMid[1][back][ix]   = ((phi(ip1, 2, 1, 2) - phi(ip1, 0, 1, 2))/(2.0*DELTA_X) + gradPhiMid[1][centre][ix])/2.0;
 
-	        gradPhiMid[1][centre][iy] = (phi(ip1, 1, 2, 1) - phi(ip1, 1, 0, 1))/(2.0*DELTA_Y);
-	        gradPhiMid[1][left][iy]   = ((phi(ip1, 0, 2, 1) - phi(ip1, 0, 0, 1))/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
-	        gradPhiMid[1][right][iy]  = ((phi(ip1, 2, 2, 1) - phi(ip1, 2, 0, 1))/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
-	        gradPhiMid[1][top][iy]    = (phi(ip1, 1, 1, 1) - phi(ip1, 1, 0, 1))/(DELTA_Y);
-	        gradPhiMid[1][bottom][iy] = (phi(ip1, 1, 2, 1) - phi(ip1, 1, 1, 1))/(DELTA_Y);
-	        gradPhiMid[1][front][iy]  = ((phi(ip1, 1, 2, 0) - phi(ip1, 1, 0, 0))/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
-	        gradPhiMid[1][back][iy]   = ((phi(ip1, 1, 2, 2) - phi(ip1, 1, 0, 2))/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
+            gradPhiMid[1][centre][iy] = (phi(ip1, 1, 2, 1) - phi(ip1, 1, 0, 1))/(2.0*DELTA_Y);
+            gradPhiMid[1][left][iy]   = ((phi(ip1, 0, 2, 1) - phi(ip1, 0, 0, 1))/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
+            gradPhiMid[1][right][iy]  = ((phi(ip1, 2, 2, 1) - phi(ip1, 2, 0, 1))/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
+            gradPhiMid[1][top][iy]    = (phi(ip1, 1, 1, 1) - phi(ip1, 1, 0, 1))/(DELTA_Y);
+            gradPhiMid[1][bottom][iy] = (phi(ip1, 1, 2, 1) - phi(ip1, 1, 1, 1))/(DELTA_Y);
+            gradPhiMid[1][front][iy]  = ((phi(ip1, 1, 2, 0) - phi(ip1, 1, 0, 0))/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
+            gradPhiMid[1][back][iy]   = ((phi(ip1, 1, 2, 2) - phi(ip1, 1, 0, 2))/(2.0*DELTA_Y) + gradPhiMid[1][centre][iy])/2.0;
 
-	        gradPhiMid[1][centre][iz] = (phi(ip1, 1, 1, 2) - phi(ip1, 1, 1, 0))/(2.0*DELTA_Z);
-	        gradPhiMid[1][left][iz]   = ((phi(ip1, 0, 1, 2) - phi(ip1, 0, 1, 0))/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
-	        gradPhiMid[1][right][iz]  = ((phi(ip1, 2, 1, 2) - phi(ip1, 2, 1, 0))/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
-	        gradPhiMid[1][top][iz]    = ((phi(ip1, 1, 0, 2) - phi(ip1, 1, 0, 0))/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
-	        gradPhiMid[1][bottom][iz] = ((phi(ip1, 1, 2, 2) - phi(ip1, 1, 2, 0))/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
-	        gradPhiMid[1][front][iz]  = (phi(ip1, 1, 1, 1) - phi(ip1, 1, 1, 0))/(DELTA_Z);
-	        gradPhiMid[1][back][iz]   = (phi(ip1, 1, 1, 2) - phi(ip1, 1, 1, 1))/(DELTA_Z);
+            gradPhiMid[1][centre][iz] = (phi(ip1, 1, 1, 2) - phi(ip1, 1, 1, 0))/(2.0*DELTA_Z);
+            gradPhiMid[1][left][iz]   = ((phi(ip1, 0, 1, 2) - phi(ip1, 0, 1, 0))/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
+            gradPhiMid[1][right][iz]  = ((phi(ip1, 2, 1, 2) - phi(ip1, 2, 1, 0))/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
+            gradPhiMid[1][top][iz]    = ((phi(ip1, 1, 0, 2) - phi(ip1, 1, 0, 0))/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
+            gradPhiMid[1][bottom][iz] = ((phi(ip1, 1, 2, 2) - phi(ip1, 1, 2, 0))/(2.0*DELTA_Z) + gradPhiMid[1][centre][iz])/2.0;
+            gradPhiMid[1][front][iz]  = (phi(ip1, 1, 1, 1) - phi(ip1, 1, 1, 0))/(DELTA_Z);
+            gradPhiMid[1][back][iz]   = (phi(ip1, 1, 1, 2) - phi(ip1, 1, 1, 1))/(DELTA_Z);
 
-	        #pragma acc parallel loop
-	        for (i = 0; i < maxPos; i++)
-        	{
-            	qMid[i][ix] = phiMid[0][i]*gradPhiMid[1][i][ix] - phiMid[1][i]*gradPhiMid[0][i][ix];
-            	qMid[i][iy] = phiMid[0][i]*gradPhiMid[1][i][iy] - phiMid[1][i]*gradPhiMid[0][i][iy];
+            #pragma acc parallel loop
+            for (i = 0; i < maxPos; i++)
+            {
+                qMid[i][ix] = phiMid[0][i]*gradPhiMid[1][i][ix] - phiMid[1][i]*gradPhiMid[0][i][ix];
+                qMid[i][iy] = phiMid[0][i]*gradPhiMid[1][i][iy] - phiMid[1][i]*gradPhiMid[0][i][iy];
                 qMid[i][iz] = phiMid[0][i]*gradPhiMid[1][i][iz] - phiMid[1][i]*gradPhiMid[0][i][iz];
                 multiply(Rotation_matrix, qMid[i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-            	qMid[i][ix] = Rotated_vector[ix];
-            	qMid[i][iy] = Rotated_vector[iy];
+                qMid[i][ix] = Rotated_vector[ix];
+                qMid[i][iy] = Rotated_vector[iy];
                 qMid[i][iz] = Rotated_vector[iz];
             }
 
             #pragma acc parallel loop
             for (i = 0; i < maxPos; i++)
-        	{
-            	ac[i] = anisotropy_01_function_ac(qMid[i], phase, ip1, dab, NUMPHASES);
-            	anisotropy_01_dAdq(qMid[i], dadq[i], phase, ip1, dab, NUMPHASES);
-            	multiply(Inv_rotation_matrix, dadq[i], Rotated_dadq[i], phase, ip1, NUMPHASES, DIMENSION);
-        	}
+            {
+                ac[i] = anisotropy_01_function_ac(qMid[i], phase, ip1, dab, NUMPHASES);
+                anisotropy_01_dAdq(qMid[i], dadq[i], phase, ip1, dab, NUMPHASES);
+                multiply(Inv_rotation_matrix, dadq[i], Rotated_dadq[i], phase, ip1, NUMPHASES, DIMENSION);
+            }
 
-        	dqdphi[ix] = gradPhiMid[1][centre][ix];
-        	dqdphi[iy] = gradPhiMid[1][centre][iy];
+            dqdphi[ix] = gradPhiMid[1][centre][ix];
+            dqdphi[iy] = gradPhiMid[1][centre][iy];
             dqdphi[iz] = gradPhiMid[1][centre][iz];
             multiply(Rotation_matrix, dqdphi, Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
             dqdphi[ix] = Rotated_vector[ix];
@@ -400,33 +403,33 @@ double calcAnisotropy_01(double phi[MAX_NUM_PHASES*27],
             dqdphi[iz] = Rotated_vector[iz];
 
             for (i = 0; i < maxPos; i++)
-        	{
-        		multiply(Rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+            {
+                multiply(Rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-            	gradPhiMid[1][i][ix] = Rotated_vector[ix];
-            	gradPhiMid[1][i][iy] = Rotated_vector[iy];
+                gradPhiMid[1][i][ix] = Rotated_vector[ix];
+                gradPhiMid[1][i][iy] = Rotated_vector[iy];
                 gradPhiMid[1][i][iz] = Rotated_vector[iz];
                 multiply(Rotation_matrix, gradPhiMid[0][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
 
-            	qab2[i] = (Rotated_vector[ix]*gradPhiMid[1][i][ix] + Rotated_vector[iy]*gradPhiMid[1][i][iy] + Rotated_vector[iz]*gradPhiMid[1][i][iz]);
+                qab2[i] = (Rotated_vector[ix]*gradPhiMid[1][i][ix] + Rotated_vector[iy]*gradPhiMid[1][i][iy] + Rotated_vector[iz]*gradPhiMid[1][i][iz]);
 
-            	multiply(Inv_rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
-            	gradPhiMid[1][i][ix] = Rotated_vector[ix];
-            	gradPhiMid[1][i][iy] = Rotated_vector[iy];
+                multiply(Inv_rotation_matrix, gradPhiMid[1][i], Rotated_vector, phase, ip1, NUMPHASES, DIMENSION);
+                gradPhiMid[1][i][ix] = Rotated_vector[ix];
+                gradPhiMid[1][i][iy] = Rotated_vector[iy];
                 gradPhiMid[1][i][iz] = Rotated_vector[iz];
            }
 
-           	sum1 = (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[right]*Rotated_dadq[right][ix]*-phiMid[1][right]*qab2[right])/DELTA_X;
-        	sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[left]*Rotated_dadq[left][ix]*-phiMid[1][left]*qab2[left])/DELTA_X;
-        	sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*Rotated_dadq[bottom][iy]*-phiMid[1][bottom]*qab2[bottom])/DELTA_Y;
+            sum1 = (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[right]*Rotated_dadq[right][ix]*-phiMid[1][right]*qab2[right])/DELTA_X;
+            sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[left]*Rotated_dadq[left][ix]*-phiMid[1][left]*qab2[left])/DELTA_X;
+            sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*Rotated_dadq[bottom][iy]*-phiMid[1][bottom]*qab2[bottom])/DELTA_Y;
             sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[top]*Rotated_dadq[top][iy]*-phiMid[1][top]*qab2[top])/DELTA_Y;
 
             sum1 += (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[back]*Rotated_dadq[back][iz]*-phiMid[1][back]*qab2[back])/DELTA_Z;
             sum1 -= (2.0*eps_ab[phase*NUMPHASES + ip1]*ac[front]*Rotated_dadq[front][iz]*-phiMid[1][front]*qab2[front])/DELTA_Z;
 
             sum2 = eps_ab[phase*NUMPHASES + ip1]*ac[right]*ac[right]*gradPhiMid[1][right][ix]/DELTA_X;
-        	sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[left]*ac[left]*gradPhiMid[1][left][ix]/DELTA_X;
-        	sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*ac[bottom]*gradPhiMid[1][bottom][iy]/DELTA_Y;
+            sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[left]*ac[left]*gradPhiMid[1][left][ix]/DELTA_X;
+            sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[bottom]*ac[bottom]*gradPhiMid[1][bottom][iy]/DELTA_Y;
             sum2 -= eps_ab[phase*NUMPHASES + ip1]*ac[top]*ac[top]*gradPhiMid[1][top][iy]/DELTA_Y;
 
             sum2 += eps_ab[phase*NUMPHASES + ip1]*ac[back]*ac[back]*gradPhiMid[1][back][iz]/DELTA_Z;
@@ -437,5 +440,9 @@ double calcAnisotropy_01(double phi[MAX_NUM_PHASES*27],
 
         }
     }
-	 return -1.0*(sum1 + sum2 + sum3);
+    
+    }
+    #pragma acc update self(sum1 ,sum2 , sum3)
+     return -1.0*(sum1 + sum2 + sum3);
+    
 }
