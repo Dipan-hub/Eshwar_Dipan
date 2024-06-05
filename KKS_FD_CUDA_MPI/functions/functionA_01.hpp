@@ -19,13 +19,13 @@
 #define back   6
 
 /*
- * double calcAnisotropy_01
+ * __device__ double calcAnisotropy_01
  *
  * Calculate anisotropy
  *
  * Arguments:
  *              1. double phi[MAX_NUM_PHASES][3][3][3] - Values of phi at 26 nearest-neighbours and second-nearest neighbours,
- *                                                       arranged phase-by-phase (flattened). [0:N-1][i-1:i+1][j-1:j+1][k-1][k+1]
+ *                                                       arranged phase-by-phase (flattened). [0:N-1][i-1:i+1][j-1:i+1][k-1][k+1]
  *              2. double *dab - Anisotropy strength for every pair of phases.
  *              3. double *eps_ab - kappa
  *              4. double *Rotation_matrix - [N][N][3][3]
@@ -37,6 +37,7 @@
  *              10. double DELTA_Z
  *
  */
+extern 
 double calcAnisotropy_01(double phi[MAX_NUM_PHASES*27],
                          double *dab, double *eps_ab,
                          double *Rotation_matrix, double *Inv_rotation_matrix,
