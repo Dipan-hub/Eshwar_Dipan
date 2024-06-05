@@ -1,4 +1,4 @@
-// check for the required headers
+#include "calcPhaseComp.hpp"
 void __initMu__helper(double **phi, double **comp, double **phaseComp, double **mu,
                 long *thermo_phase, double temperature,
                 long NUMPHASES, long NUMCOMPONENTS, long DIMENSION,
@@ -8,8 +8,8 @@ void __initMu__helper(double **phi, double **comp, double **phaseComp, double **
 
         double y[MAX_NUM_COMP], mu0[MAX_NUM_COMP];
         double sum = 0.0;
-// check the correct data clause ( it should be like phi[:NUMPHASES*(rangeof (idx))]
-   #pragma acc data present(phi, comp, phaseComp, mu,thermo_phase,temperature, NUMPHASES, NUMCOMPONENTS, DIMENSION,sizeX, sizeY,sizeZ,xStep,yStep,padding) create(y,sum) copyin(idx)     
+
+   #pragma acc data present(phi[:NUMPHASES], comp[:NUMCOMPONENTS-1], phaseComp[:NUMPHASES*(NUMCOMPONENTS-1)], mu[:NUMCOMPONENTS-1],thermo_phase,temperature, NUMPHASES, NUMCOMPONENTS, DIMENSION,sizeX, sizeY,sizeZ,xStep,yStep,padding) create(y,sum) copyin(idx)     
     {
         #pragma acc parallel loop
         for (long phase = 0; phase < NUMPHASES; phase++)
@@ -91,7 +91,7 @@ void __calcPhaseComp__helper(double **phi, double **comp,
     // Tolerance for LU solver
     double tol = 1e-10;
 
- #pragma acc data present(phi, comp,phaseComp,F0_A, F0_B, F0_C,NUMPHASES,  NUMCOMPONENTS,  DIMENSION,sizeX,  sizeY,  sizeZ,xStep,  yStep,  padding)  create(iter1, iter2, iter3, iter4 , index1,index2,sol,B,A,P) copyin(N,idx,tol)  
+ #pragma acc data present(phi[:NUMPHASES], comp[:NUMCOMPONENTS-1], phaseComp[:NUMPHASES*(NUMCOMPONENTS-1)] ,F0_A[:NUMPHASES*(NUMCOMPONENTS-1)*(NUMCOMPONENTS-1), F0_B[:NUMPHASES*(NUMCOMPONENTS-1)], F0_C[:NUMPHASES],NUMPHASES,  NUMCOMPONENTS,  DIMENSION,sizeX,  sizeY,  sizeZ,xStep,  yStep,  padding)  create(iter1, iter2, iter3, iter4 , index1,index2,sol[:MAX_NUM_PHASE_COMP],B[:MAX_NUM_PHASE_COMP],A[:MAX_NUM_PHASE_COMP*MAX_NUM_PHASE_COMP],P[:MAX_NUM_PHASE_COMP+1]) copyin(N,idx,tol)  
  {
         #pragma acc parallel loop collapse(2)
         for (iter1 = 0; iter1 < NUMCOMPONENTS-1; iter1++)
@@ -216,7 +216,7 @@ void __calcPhaseComp_02__helper(double **phi, double **comp,
         long interface = 1;
         long bulkphase;
 
-        #pragma acc data present(phi, comp,phaseComp, mu, cguess,temperature,thermo_phase,NUMPHASES,  NUMCOMPONENTS,  DIMENSION,sizeX,  sizeY,  sizeZ,xStep,  yStep,  padding) create(fun,jacInv,cn,co,tmp0,norm,retdmuphase,retdmuphase2,y,mu0,bulkphase) copyin(idx,tol,interface)
+        #pragma acc data present(phi[:NUMPHASES], comp[:NUMCOMPONENTS-1], phaseComp[:NUMPHASES*(NUMCOMPONENTS-1)], mu[:NUMCOMPONENTS-1], cguess,temperature,thermo_phase,NUMPHASES,  NUMCOMPONENTS,  DIMENSION,sizeX,  sizeY,  sizeZ,xStep,  yStep,  padding) create(fun[:MAX_NUM_COMP],jacInv[:MAX_NUM_COMP*MAX_NUM_COMP],cn[:MAX_NUM_COMP],co[:MAX_NUM_COMP],tmp0,norm,retdmuphase[:MAX_NUM_COMP*MAX_NUM_COMP],retdmuphase2[:MAX_NUM_COMP*MAX_NUM_COMP],y[:MAX_NUM_COMP],mu0[:MAX_NUM_COMP],bulkphase) copyin(idx,tol,interface)
         {
 
             int local = 1;
