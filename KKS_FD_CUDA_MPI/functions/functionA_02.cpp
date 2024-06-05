@@ -55,8 +55,9 @@ double calcAnisotropy_02(double phi[MAX_NUM_PHASES][3][3][3],
     /*
      *  Find phiMid and gradPhiMid for the phase being solved (alpha)
      */
-
-    phiMid[0][centre] = phi[phase][1][1][1];
+ #pragma acc data present( phi[MAX_NUM_PHASES*27],dab[:NUMPHASES*NUMPHASES], eps_ab[:NUMPHASES * NUMPHASES],[:NUMPHASES*NUMPHASES*3*3], Inv_rotation_matrix[:NUMPHASES*NUMPHASES*3*3],phase,  NUMPHASES,  DIMENSION,DELTA_X,  DELTA_Y,  DELTA_Z) create(i , ip1,gradPhiMid[:2*7*3],phiMid[:2*7],qMid[:7*3],dqdphi[:3],Rotated_vector[:3] , ac[:7],qab2[:7],dadq[:7*3],Rotated_dadq[:7*3]),sum1,sum2,sum3,sum4)
+{
+     phiMid[0][centre] = phi[phase][1][1][1];
 
     phiMid[0][left]   = (phi[phase][0][1][1] + phi[phase][1][1][1])/2.0;
     phiMid[0][right]  = (phi[phase][2][1][1] + phi[phase][1][1][1])/2.0;
@@ -478,5 +479,7 @@ double calcAnisotropy_02(double phi[MAX_NUM_PHASES][3][3][3],
         }   
     }
 
+}
+    #pragma acc update self(sum1 , sum2,sum3,sum4)
     return (sum1 + sum2 + sum3 + sum4);   
 }
