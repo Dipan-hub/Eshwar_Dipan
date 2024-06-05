@@ -1,6 +1,7 @@
 #include <cmath>
 #include <openacc.h>
 #include <iostream>
+#include "utilityKernels.hpp"
 
 // Utility kernel to compute the change in every cell
 void computeChange(double *A, double *B, long DIMENSION, long sizeX, long sizeY, long sizeZ) {
