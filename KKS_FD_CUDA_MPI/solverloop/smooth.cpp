@@ -1,3 +1,4 @@
+  #include "smooth.hpp"
 #define phiAniso(phase, x, y, z) (phiAniso[(((phase)*3 + (x))*3 + (y))*3 + (z)])
 
 void __smooth__(double **phi, double **phiNew,
@@ -19,8 +20,8 @@ void __smooth__(double **phi, double **phiNew,
     double dfdphiSum = 0.0;
 
     long phase, p;
-	// check the data present declaration , declare arrays with sizes , for size look in the main file
-    #pragma acc data present(phi, phiNew,relaxCoeff,kappaPhi,dab, Rotation_matrix, Inv_rotation_matrix, FUNCTION_ANISOTROPY,NUMPHASES,NUMCOMPONENTS,DIMENSION, sizeX,sizeY,sizeZ,xStep, yStep,padding,DELTA_X, DELTA_Y,DELTA_Z,DELTA_t) create(index , phiAniso,aniso,dfdphiSum, phase , p)
+
+    #pragma acc data present(phi[:NUMPHASES], phiNew[:NUMPHASES],relaxCoeff[:NUMPHASES*NUMPHASES],kappaPhi[:NUMPHASES*NUMPHASES],dab[:NUMPHASES*NUMPHASES], Rotation_matrix[:NUMPHASES*NUMPHASES*3*3], Inv_rotation_matrix[:NUMPHASES*NUMPHASES*3*3], FUNCTION_ANISOTROPY,NUMPHASES,NUMCOMPONENTS,DIMENSION, sizeX,sizeY,sizeZ,xStep, yStep,padding,DELTA_X, DELTA_Y,DELTA_Z,DELTA_t) create(index , phiAniso,aniso,dfdphiSum, phase , p)
     {
 
     		#pragma acc parallel loop collapse(6)
