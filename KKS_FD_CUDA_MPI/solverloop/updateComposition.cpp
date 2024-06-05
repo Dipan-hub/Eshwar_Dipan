@@ -1,3 +1,5 @@
+
+#include "updateComposition.hpp"
 void __updateComposition__(double **phi, double **phiNew,
                            double **comp, double **compNew,
                            double **phaseComp,
@@ -39,8 +41,8 @@ void __updateComposition__(double **phi, double **phiNew,
 
     int interface = 1;
     double divphi1 = 0.0, divphi2 = 0.0;
-// check the data present declaration , declare arrays with sizes , for size look in the main file
-    #pragma acc data present(phi[:sizeX][:sizeY], phiNew[:sizeX][:sizeY], comp[:sizeX][:sizeY], compNew[:sizeX][:sizeY], phaseComp[:sizeX][:sizeY],F0_A[:NUMCOMPONENTS], F0_B[:NUMCOMPONENTS], mobility[:NUMCOMPONENTS], diffusivity[:NUMCOMPONENTS], kappaPhi[:NUMPHASES], theta_ij[:NUMPHASES]) create(mu, effMobility, mobilityLocal, J_xp, J_xm, J_yp, J_ym, J_zp, J_zm, alpha, modgradphi, dphidt, gradx_phi, grady_phi, gradz_phi,phix, phiy, phiz, alphidot, scalprodct, jatr, jatc, jat, component, component2, phase, interface, divphi1, divphi2, index)
+
+    #pragma acc data present(phi[:NUMPHASES], phiNew[:NUMPHASES], comp[:NUMCOMPONENTS-1], compNew[:NUMCOMPONENTS-1], phaseComp[:NUMPHASES*(NUMCOMPONENTS-1)] ,F0_A[:NUMPHASES*(NUMCOMPONENTS-1)*(NUMCOMPONENTS-1)], F0_B[:NUMPHASES*(NUMCOMPONENTS-1)], mobility[:NUMPHASES*(NUMCOMPONENTS-1)*(NUMCOMPONENTS-1)], diffusivity[:NUMPHASES*(NUMCOMPONENTS-1)*(NUMCOMPONENTS-1)], kappaPhi[:NUMPHASES*NUMPHASES], theta_ij[:NUMPHASES*NUMPHASES] , NUMPHASES,  NUMCOMPONENTS,  DIMENSION, sizeX,  sizeY,  sizeZ,xStep,  yStep,  padding,  antiTrapping,DELTA_X,  DELTA_ DELTA_Z, DELTA_t ) create(mu[:7], effMobility[:7], mobilityLocal, J_xp, J_xm, J_yp, J_ym, J_zp, J_zm, alpha[:(MAX_NUM_PHASES-1)*(MAX_NUM_COMP-1)*7], modgradphi[:MAX_NUM_PHASES*7], dphidt[:MAX_NUM_PHASES*7], gradx_phi[:MAX_NUM_PHASES*5], grady_phi[:MAX_NUM_PHASES*5], gradz_phi[:MAX_NUM_PHASES*5],phix[:MAX_NUM_PHASES*7], phiy[:MAX_NUM_PHASES*7], phiz[:MAX_NUM_PHASES*7], alphidot[:(MAX_NUM_PHASES-1)*(MAX_NUM_COMP-1)*7], scalprodct[:MAX_NUM_PHASES-1]*7, jatr[:MAX_NUM_COMP-1], jatc[:(MAX_NUM_PHASES-1)*(MAX_NUM_COMP-1)], jat[:(MAX_NUM_PHASES-1)*(MAX_NUM_COMP-1)*7, component, component2, phase, interface, divphi1, divphi2, index)
 {
     // Parallel region for index array update
     #pragma acc parallel loop collapse(6)
@@ -371,7 +373,7 @@ void __updateComposition__(double **phi, double **phiNew,
                 jatr[component] = 0.0;
             }
         }
-        #pragma acc parallel loop private(J_xp, J_xm, J_yp, J_ym, J_zp, J_zm, effMobility, mu, mobilityLocal)
+        #pragma acc parallel loop private(J_xp, J_xm, J_yp, J_ym, J_zp, J_zm, mu[:7], effMobility[:7], mobilityLocal)
         for (component = 0; component < NUMCOMPONENTS - 1; component++)
         {
             J_xp = 0.0;
@@ -621,7 +623,7 @@ void __updateComposition_02__(double **phi, double **phiNew,
 
     long idx[7] = {-1}, maxPos = 5;
 
-    idx[0] = i*xStep + j*yStep + k;
+    
 
     double muLocal[7];
     double effMobility[7];
@@ -647,7 +649,8 @@ void __updateComposition_02__(double **phi, double **phiNew,
     long component, component2, phase;
 
     double tol = 1e-6;
-  #pragma acc data present(phi[:sizeX][:sizeY], phiNew[:sizeX][:sizeY], comp[:sizeX][:sizeY], compNew[:sizeX][:sizeY], phaseComp[:sizeX][:sizeY],F0_A[:NUMCOMPONENTS], F0_B[:NUMCOMPONENTS], mobility[:NUMCOMPONENTS], diffusivity[:NUMCOMPONENTS], kappaPhi[:NUMPHASES], theta_ij[:NUMPHASES]) create(muLocal, effMobility, J_xp, J_xm, J_yp, J_ym, J_zp, J_zm, alpha, modgradphi, dphidt, gradx_phi, grady_phi, gradz_phi,phix, phiy, phiz, alphidot, scalprodct, jatr, jatc, jat, component, component2, phase, tol)
+
+  #pragma acc data present(phi[:NUMPHASES], phiNew[:NUMPHASES], comp[:NUMCOMPONENTS-1], compNew[:NUMCOMPONENTS-1], phaseComp[:NUMPHASES*(NUMCOMPONENTS-1)] , mu[:NUMCOMPONENTS-1],thermo_phase,diffusivity[:NUMPHASES*(NUMCOMPONENTS-1)*(NUMCOMPONENTS-1)], kappaPhi[:NUMPHASES*NUMPHASES], theta_ij[:NUMPHASES*NUMPHASES],temperature,  molarVolume, NUMPHASES,  NUMCOMPONENTS,  DIMENSION,sizeX,  sizeY,  sizeZ, xStep,  yStep,  padding, DELTA_X,  DELTA_Y,  DELTA_Z,DELTA_t) create(alpha[:(MAX_NUM_PHASES-1)*(MAX_NUM_COMP-1)*7] , modgradphi[:MAX_NUM_PHASES*7],dphidt[:MAX_NUM_PHASES*7],gradx_phi[:MAX_NUM_PHASES*5],grady_phi[:MAX_NUM_PHASES*5],gradz_phi[:MAX_NUM_PHASES*5],phix[:MAX_NUM_PHASES*7],phiy[:MAX_NUM_PHASES*7],phiz[:MAX_NUM_PHASES*7],alphidot[:(MAX_NUM_PHASES-1)*(MAX_NUM_COMP-1)*7],scalprodct[:(MAX_NUM_PHASES-1)*7],jatr[:MAX_NUM_COMP-1],jatc[:(MAX_NUM_PHASES-1)*(MAX_NUM_COMP-1)],jat[:(MAX_NUM_PHASES-1)*(MAX_NUM_COMP-1)*7],component,component2,phase) copyin(idx[:7],maxPos,index[:3*3*3])
     {
 
         #pragma acc parallel loop collapse(6)
@@ -663,6 +666,7 @@ void __updateComposition_02__(double **phi, double **phiNew,
                         {
                             for (long z = 0; z < 3; z++)
                             {
+                                idx[0] = i*xStep + j*yStep + k;
                                 index[x][y][z] = (k + z - 1) + (j + y - 1) * yStep + (i + x - 1) * xStep;
                             }
                         }
@@ -968,7 +972,7 @@ void __updateComposition_02__(double **phi, double **phiNew,
             idx[6] = i*xStep + j*yStep + k-1;
         }
 
-        #pragma acc data present(phi, NUMPHASES) create(foundBulkPhase,tempBulkPhase)
+        #pragma acc data present(phi[:NUMPHASES], NUMPHASES) create(foundBulkPhase,tempBulkPhase)
     {
         #pragma acc parallel loop reduction(max:foundBulkSignature)
         for (long is = 0; is < NUMPHASES; is++)
@@ -1105,7 +1109,7 @@ void __updateMu_02__Helper(double **phi, double **comp,
     long foundBulkPhase = 0;  // To handle the result of the loop
     long tempBulkPhase = -1;  // Temporary storage for the bulk phase within the loop
 
-    #pragma acc data present(phi, NUMPHASES) create(foundBulkPhase,tempBulkPhase)
+    #pragma acc data present(phi[:NUMPHASES], NUMPHASES) create(foundBulkPhase,tempBulkPhase)
     {
         #pragma acc parallel loop reduction(max:foundBulkSignature)
         for (long is = 0; is < NUMPHASES; is++)
@@ -1133,7 +1137,7 @@ void __updateMu_02__Helper(double **phi, double **comp,
         double Inv[MAX_NUM_COMP][MAX_NUM_COMP];
         int P[MAX_NUM_COMP];
 
-        #pragma acc data present(phi, comp, phiNew, compNew, phaseComp, mu, thermo_phase,NUMPHASES,NUMCOMPONENTS) create(dmudc, dcdmu, y, Inv, P,RHS,sum)
+        #pragma acc data present(phi[:NUMPHASES], phiNew[:NUMPHASES], comp[:NUMCOMPONENTS-1], compNew[:NUMCOMPONENTS-1], phaseComp[:NUMPHASES*(NUMCOMPONENTS-1)] , mu[:NUMCOMPONENTS-1], thermo_phase[:NUMPHASES],NUMPHASES,NUMCOMPONENTS) create(dmudc[:MAX_NUM_COMP * MAX_NUM_COMP], dcdmu[:MAX_NUM_COMP * MAX_NUM_COMP], y[:MAX_NUM_COMP], Inv[MAX_NUM_COMP * MAX_NUM_COMP], P[MAX_NUM_COMP],RHS[MAX_NUM_COMP],sum)
         {
             // Initialize dcdmu matrix to zero in parallel
             #pragma acc parallel loop collapse(2)
