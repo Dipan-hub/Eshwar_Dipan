@@ -1,10 +1,8 @@
-#ifndef BOUNDARY_CUH_
-#define BOUNDARY_CUH_
+#ifndef BOUNDARY_HPP_
+#define BOUNDARY_HPP_
 
-#include <cuda.h>
-#include <cuda_runtime.h>
 #include <stdio.h>
-#include "structures.h"
+#include "structures.hpp"
 
 #define xm 1
 #define xp 2
@@ -20,13 +18,11 @@
  *  4. sizeX, sizeY, sizeZ - Dimensions of the subdomain, including the boundary buffer layers
  */
 
-__global__
 void applyNeumann(double **field,
                   long face, long numFields, long DIMENSION,
                   long sizeX, long sizeY, long sizeZ,
                   long xStep, long yStep, long padding);
 
-__global__
 void applyNeumann(double **field,
                   long face, long numFields, long DIMENSION,
                   long sizeX, long sizeY, long sizeZ,
@@ -37,7 +33,6 @@ extern "C"
 #endif
 void applyBoundaryCondition(double **field, long fieldCode, long numFields,
                             domainInfo simDomain, controls simControls,
-                            simParameters simParams, subdomainInfo subdomain,
-                            dim3 gridSize, dim3 blockSize);
+                            simParameters simParams, subdomainInfo subdomain);
 
-#endif
+#endif // BOUNDARY_HPP_
