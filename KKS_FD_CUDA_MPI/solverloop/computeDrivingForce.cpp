@@ -1,4 +1,5 @@
-// check for appropiate header files
+#include "computeDrivingForce.hpp"
+
 void __computeDrivingForce__helper__(double **phi, double **comp,
                              double **dfdphi,
                              double **phaseComp,
@@ -13,7 +14,7 @@ void __computeDrivingForce__helper__(double **phi, double **comp,
     double Bpq_hphi[MAX_NUM_PHASES];
    // check the data present declaration , declare arrays with sizes , for size look in the main file 
 
-    #pragma acc data present(phi,comp,dfdphi,phaseComp,F0_A,F0_B,F0_C,molarVolume,theta_i,theta_ij,theta_ijk,ELASTICITY,NUMPHASES,NUMCOMPONENTS,DIMENSION,sizeX,sizeY,sizeZ,xStep,yStep,padding,idx) create(Bpq_hphi)
+    #pragma acc data present(phi[:NUMPHASES], comp[:NUMCOMPONENTS-1],dfdphi[:NUMPHASES],phaseComp[:NUMPHASES*NUMCOMPONENTS-1],F0_A[:NUMPHASES*(NUMCOMPONENTS-1)*(NUMCOMPONENTS-1), F0_B[:NUMPHASES*(NUMCOMPONENTS-1)], F0_C[:NUMPHASES],molarVolume,theta_i[:NUMPHASES],theta_ij[:NUMPHASES*NUMPHASES],theta_ijk[:NUMPHASES*NUMPHASES*NUMPHASES],ELASTICITY,NUMPHASES,NUMCOMPONENTS,DIMENSION,sizeX,sizeY,sizeZ,xStep,yStep,padding,idx) create(Bpq_hphi[:MAX_NUM_PHASES])
    {
         #pragma acc parallel loop
         for (long p = 0; p < NUMPHASES; p++)
@@ -37,7 +38,7 @@ void __computeDrivingForce__helper__(double **phi, double **comp,
                 /*
                  * \psi_{p} = f^{p} - \sum_{i=1}^{K-1} (c^{p}_{i}\mu_{i})
                  */
-               double psi = 0.0;
+                psi = 0.0;
 
                 psi += calcPhaseEnergy(phaseComp, p, F0_A, F0_B, F0_C, idx, NUMPHASES, NUMCOMPONENTS);
                  #pragma acc parallel loop 
