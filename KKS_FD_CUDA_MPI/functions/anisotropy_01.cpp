@@ -1,6 +1,4 @@
 #include "anisotropy_01.hpp"
-#include <cmath>
-
 
 // Function to calculate anisotropy gradient
 void anisotropy_01_dAdq(double *qab, double *dadq, long a, long b, double *dab, long NUMPHASES)
