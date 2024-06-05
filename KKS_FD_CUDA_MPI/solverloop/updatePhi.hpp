@@ -3,11 +3,11 @@
 
 #include <stdio.h>
 
-#include "helper_string.hpp"
-#include "helper_cuda.hpp"
+#include "helper_string.h"
+//#include "helper_cuda.hpp"
 
 #include "structures.hpp"
-#include "Thermo.hpp"
+#include "Thermo.h"
 #include "utilityKernels.hpp"
 #include "matrix.hpp"
 #include "functionA_01.hpp"
