@@ -1,5 +1,5 @@
 
-
+#include "updatePhi.hpp"
 
 #define phiAniso(phase, x, y, z) (phiAniso[(((phase)*3 + (x))*3 + (y))*3 + (z)])
 
@@ -27,7 +27,7 @@ void __updatePhi__(double **phi, double **dfdphi, double **phiNew,
 
 	    int interface = 1;
 	// check the data present declaration , declare arrays with sizes , for size look in the main file 
-	#pragma acc data present(phi,dfdphi, phiNew,relaxCoeff, kappaPhi,dab, Rotation_matrix, Inv_rotation_matrix,  FUNCTION_ANISOTROPY,NUMPHASES, NUMCOMPONENTS,DIMENSION,FUNCTION_F,sizeX, sizeY,  sizeZ,xStep,  yStep, ong padding, DELTA_X,  DELTA_Y,  DELTA_Z,DELTA_t)  create(index , phiAniso,divphi,aniso,dfdphiSum,phase,p) copyin(interface)
+	#pragma acc data present(phi[:NUMPHASES],dfdphi[, phiNew[:NUMPHASES],relaxCoeff[:NUMPHASES*NUMPHASES], kappaPhi[:NUMPHASES*NUMPHASES],dab[:NUMPHASES*NUMPHASES], Rotation_matrix[:NUMPHASES*NUMPHASES*3*3], Inv_rotation_matrix[:NUMPHASES*NUMPHASES*3*3],  FUNCTION_ANISOTROPY,NUMPHASES, NUMCOMPONENTS,DIMENSION,FUNCTION_F,sizeX, sizeY,  sizeZ,xStep,  yStep, ong padding, DELTA_X,  DELTA_Y,  DELTA_Z,DELTA_t)  create(index[:3*3*3] , phiAniso[:MAX_NUM_PHASES*27],divphi[MAX_NUM_PHASES],aniso[MAX_NUM_PHASES],dfdphiSum,phase,p) copyin(interface)
 	{
 
 		 	#pragma acc parallel loop collapse(6)
