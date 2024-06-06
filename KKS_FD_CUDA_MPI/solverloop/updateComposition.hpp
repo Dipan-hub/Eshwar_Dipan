@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include "structures.hpp"
-#include "Thermo.hpp"
+#include "Thermo.h"
 #include "utilityKernels.hpp"
 #include "matrix.hpp"
 #include "functionH.hpp"
