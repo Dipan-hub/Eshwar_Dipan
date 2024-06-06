@@ -21,4 +21,8 @@ double calcDoubleWellDerivative(double **phi, long phase,
                                 double *theta_i, double *theta_ij, double *theta_ijk,
                                 long idx, long NUMPHASES);
 
+double calcDoubleObstacleDerivative(double **phi, long phase,
+                                    double *theta_i, double *theta_ij, double *theta_ijk,
+                                    long idx, long NUMPHASES);
+
 #endif // FUNCTIONW_02_H_
