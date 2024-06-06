@@ -12,7 +12,7 @@
 #define ENABLE_HDF5 1
 #endif
 
-#include "structures.h"
+#include "structures.hpp"
 
 #define  IS_BIG_ENDIAN     (1 == htons(1))
 #define  IS_LITTLE_ENDIAN  (!IS_BIG_ENDIAN)
