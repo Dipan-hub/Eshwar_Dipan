@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "structures.hpp"
 #include "utilityKernels.hpp"
-#include "Thermo.hpp"
+#include "Thermo.h"
 #include "matrix.hpp"
 #include "functionF.hpp"
 #include "functionH.hpp"
