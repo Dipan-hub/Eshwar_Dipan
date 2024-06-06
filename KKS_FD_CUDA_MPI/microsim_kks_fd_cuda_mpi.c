@@ -43,7 +43,7 @@
 #include "computeDrivingForce.hpp"
 #include "updateComposition.hpp"
 #include "updatePhi.hpp"
-#include "computeElastic.h"
+#include "computeElastic.cuh"
 #include "utilityKernels.hpp"
 
 int main(int argc, char *argv[])
